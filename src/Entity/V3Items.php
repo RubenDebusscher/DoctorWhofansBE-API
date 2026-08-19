@@ -45,7 +45,7 @@ class V3Items
 
     #[ORM\JoinColumn(name: 'Type', referencedColumnName: 'ContentTypeID')]
     #[ORM\ManyToOne(targetEntity: \V3Contenttypes::class)]
-    #[Groups(['v3_item:detail', 'v3_item:write'])]
+    #[Groups(['v3_item:detail', 'v3_item:write','v3_item:list'])]
     #[Gedmo\Versioned] // <-- Blijf wijzigingen in 'Name' volgen!
     private ?V3Contenttypes $type = null;
 

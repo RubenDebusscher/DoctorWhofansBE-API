@@ -32,7 +32,7 @@ class V3Contenttypes
      * @var string
      */
     #[ORM\Column(name: 'Name', type: 'string', length: 255, nullable: false)]
-    #[Groups(['v3_item:detail'])]
+    #[Groups(['v3_item:detail','v3_item:list'])]
     private $name;
 
     /**
