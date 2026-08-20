@@ -40,14 +40,14 @@ class ContentQuotes
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'quote_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $quoteCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'quote_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $quoteCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'quote_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $quoteLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'quote_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $quoteLastModifiedAt = null;
 
     /**
      * @var string

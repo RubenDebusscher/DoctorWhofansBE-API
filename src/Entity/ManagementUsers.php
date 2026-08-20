@@ -8,8 +8,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Component\Serializer\Annotation\Groups;
-use Symfony\Component\Serializer\Annotation\Ignore;
+use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Serializer\Attribute\Ignore;
 
 /**
  * ManagementUsers
@@ -163,7 +163,7 @@ class ManagementUsers implements UserInterface, PasswordAuthenticatedUserInterfa
 
         return array_unique($roles);
     }
-
+    #[\Deprecated(since: 'symfony/security-http 7.3')]
     public function eraseCredentials(): void
     {
         // Optioneel voor het wissen van tijdelijke gevoelige gegevens

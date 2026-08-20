@@ -106,14 +106,14 @@ class ApiMagazines
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'magazine_Created_At', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $magazineCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'magazine_Created_At', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $magazineCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'magazine_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $magazineLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'magazine_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $magazineLastModifiedAt = null;
 
     /**
      * @var \ManagementPages

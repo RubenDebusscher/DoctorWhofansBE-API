@@ -6,6 +6,8 @@ namespace App\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Serializer\Attribute\Ignore;
 
 /**
  * V3Validationrules
@@ -38,25 +40,27 @@ class V3Validationrules
      * @var string
      */
     #[ORM\Column(name: 'Name', type: 'string', length: 255, nullable: false)]
+    #[Groups(['contenttype:read', 'v3_item:detail'])]
     private $name;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'Description', type: 'text', length: 65535, nullable: true)]
+    #[Groups(['contenttype:read', 'v3_item:detail'])]
     private $description;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $createdAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $createdAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'updated_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $updatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'updated_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $updatedAt = null;
 
     /**
      * @var \ManagementUsers

@@ -32,14 +32,14 @@ class ApiShows
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'show_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $showCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'show_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $showCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'show_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $showLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'show_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $showLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

@@ -36,8 +36,8 @@ class LPaginaTypes
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'LPT_Added', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $lptAdded = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'LPT_Added', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $lptAdded = null;
 
     /**
      * @var int

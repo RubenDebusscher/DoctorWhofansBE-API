@@ -40,14 +40,14 @@ class ApiSeasons
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'season_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $seasonCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'season_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $seasonCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'season_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $seasonLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'season_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $seasonLastModifiedAt = null;
 
     /**
      * @var \ApiShows

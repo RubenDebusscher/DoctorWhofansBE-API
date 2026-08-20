@@ -16,6 +16,7 @@ use Gedmo\Mapping\Annotation as Gedmo; // Importeer Gedmo
 #[ORM\Index(name: 'updated_by', columns: ['updated_by'])]
 #[Gedmo\Loggable] // <-- Schakelt audit logging in voor V3Items
 #[ORM\Entity]
+#[ORM\HasLifecycleCallbacks] // 1. Voeg dit attribuut toe aan de class
 class V3Items
 {
     #[ORM\Column(name: 'ItemID', type: 'integer', nullable: false)]
@@ -34,11 +35,11 @@ class V3Items
     #[Gedmo\Versioned] // <-- Blijf wijzigingen in 'Name' volgen!
     private ?string $image = null;
 
-    #[ORM\Column(name: 'created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
+    #[ORM\Column(name: 'created_at', type: 'datetime_immutable', nullable: false)]
     #[Groups(['v3_item:detail'])]
     private ?\DateTimeInterface $createdAt = null;
 
-    #[ORM\Column(name: 'updated_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
+    #[ORM\Column(name: 'updated_at', type: 'datetime_immutable', nullable: false)]
     #[Groups(['v3_item:detail'])]
     #[Gedmo\Versioned] // <-- Blijf wijzigingen in 'Name' volgen!
     private ?\DateTimeInterface $updatedAt = null;
@@ -67,8 +68,25 @@ class V3Items
     public function __construct()
     {
         $this->itemAttributes = new ArrayCollection();
-        $this->createdAt = new \DateTime();
-        $this->updatedAt = new \DateTime();
+        $this->createdAt = new \DateTimeImmutable();
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+
+
+    #[ORM\PrePersist] // 2. Wordt 1x uitgevoerd bij het EERSTE aanmaken
+    public function onPrePersist(): void
+    {
+        if ($this->createdAt === null) {
+            $this->createdAt = new \DateTimeImmutable();
+        }
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    #[ORM\PreUpdate] // 3. Wordt automatisch uitgevoerd bij ELKE latere opslagactie
+    public function onPreUpdate(): void
+    {
+        $this->updatedAt = new \DateTimeImmutable();
     }
 
     public function getItemid(): ?int

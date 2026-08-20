@@ -56,14 +56,14 @@ class ContentVideos
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'video_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $videoCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'video_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $videoCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'video_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $videoLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'video_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $videoLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

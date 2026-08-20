@@ -34,14 +34,14 @@ class ContentVideodescriptions
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'videodescription_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $videodescriptionCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'videodescription_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $videodescriptionCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'videodescription_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $videodescriptionLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'videodescription_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $videodescriptionLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

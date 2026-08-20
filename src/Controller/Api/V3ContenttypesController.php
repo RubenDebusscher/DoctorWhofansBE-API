@@ -10,14 +10,21 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
+use Symfony\Component\Serializer\SerializerInterface;
 
-#[Route('/api/v3-contenttypes')]
+#[Route('/api/v3/contenttypes')]
 class V3ContenttypesController extends AbstractController
 {
     #[Route('', methods: ['GET'])]
     public function index(V3ContenttypesRepository $repository): JsonResponse
     {
-        return $this->json($repository->findAll());
+        return $this->json(
+            $repository->findAll(),
+            Response::HTTP_OK,
+            [],
+            ['groups' => ['contenttype:read']]
+        );
     }
 
     #[Route('/{id}', methods: ['GET'])]
@@ -27,7 +34,17 @@ class V3ContenttypesController extends AbstractController
             return $this->json(['error' => 'Item niet gevonden'], Response::HTTP_NOT_FOUND);
         }
 
-        return $this->json($entity);
+        return $this->json(
+            $entity,
+            Response::HTTP_OK,
+            [],
+            ['groups' => ['contenttype:read'],
+                AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
+                'circular_reference_handler' => function ($object) {
+                    return method_exists($object, 'getId') ? $object->getId() : null;
+                },
+                ]
+        );
     }
 
     #[Route('', methods: ['POST'])]

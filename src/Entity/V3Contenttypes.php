@@ -8,8 +8,8 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Serializer\Annotation\Groups;
-use Symfony\Component\Serializer\Annotation\Ignore;
+use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Serializer\Attribute\Ignore;
 
 /**
  * V3Contenttypes
@@ -26,33 +26,34 @@ class V3Contenttypes
     #[ORM\Column(name: 'ContentTypeID', type: 'integer', nullable: false)]
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
+    #[Groups(['contenttype:read', 'v3_item:list', 'v3_item:detail'])]
     private $contenttypeid;
 
     /**
      * @var string
      */
     #[ORM\Column(name: 'Name', type: 'string', length: 255, nullable: false)]
-    #[Groups(['v3_item:detail','v3_item:list'])]
+    #[Groups(['v3_item:detail','v3_item:list','contenttype:read'])]
     private $name;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'Description', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_item:detail'])]
+    #[Groups(['v3_item:detail','contenttype:read'])]
     private $description;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $createdAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $createdAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'updated_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $updatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'updated_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $updatedAt = null;
 
     /**
      * @var \ManagementUsers
@@ -72,6 +73,7 @@ class V3Contenttypes
      * @var \Doctrine\Common\Collections\Collection
      */
     #[ORM\ManyToMany(targetEntity: \V3Attributes::class, mappedBy: 'contenttypeid')]
+    #[Groups(['contenttype:read'])]
     private $attributeid = array();
 
     /**

@@ -75,14 +75,14 @@ class ApiCrew
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'crew_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $crewCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'crew_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $crewCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'crew_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $crewLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'crew_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $crewLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

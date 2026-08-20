@@ -45,14 +45,14 @@ class ManagementTypes
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'type_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $typeCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'type_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $typeCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'type_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $typeLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'type_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $typeLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

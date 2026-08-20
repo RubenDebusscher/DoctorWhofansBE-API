@@ -96,14 +96,14 @@ class ApiEpisodes
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'episode_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $episodeCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'episode_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $episodeCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'episode_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $episodeLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'episode_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $episodeLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

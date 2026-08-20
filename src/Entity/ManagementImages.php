@@ -33,14 +33,14 @@ class ManagementImages
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'image_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $imageCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'image_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $imageCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'image_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $imageLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'image_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $imageLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

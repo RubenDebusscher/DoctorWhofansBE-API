@@ -20,14 +20,14 @@ class ApiSerialsDoctors
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'serials_doctors_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $serialsDoctorsCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'serials_doctors_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $serialsDoctorsCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'serials_doctors_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $serialsDoctorsLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'serials_doctors_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $serialsDoctorsLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

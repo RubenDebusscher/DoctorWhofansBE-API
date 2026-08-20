@@ -76,14 +76,14 @@ class ApiSerials
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'serial_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $serialCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'serial_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $serialCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'serial_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $serialLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'serial_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $serialLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

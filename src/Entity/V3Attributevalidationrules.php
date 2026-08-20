@@ -20,14 +20,14 @@ class V3Attributevalidationrules
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $createdAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $createdAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'updated_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $updatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'updated_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $updatedAt = null;
 
     /**
      * @var \V3Attributes

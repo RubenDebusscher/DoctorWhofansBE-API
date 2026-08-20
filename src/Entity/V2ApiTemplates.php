@@ -39,14 +39,14 @@ class V2ApiTemplates
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'apiT_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $apitCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'apiT_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $apitCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'apit_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $apitLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'apit_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $apitLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

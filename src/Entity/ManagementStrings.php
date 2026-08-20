@@ -40,8 +40,8 @@ class ManagementStrings
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'string_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $stringCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'string_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $stringCreatedAt = null;
 
     /**
      * @var \ManagementUsers

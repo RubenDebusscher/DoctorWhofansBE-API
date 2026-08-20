@@ -73,8 +73,8 @@ class V3Itemattributes
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $createdAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $createdAt = null;
 
     /**
      * @var int
@@ -85,21 +85,21 @@ class V3Itemattributes
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'updated_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $updatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'updated_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $updatedAt = null;
 
     /**
      * @var \V3Items
      */
     #[ORM\JoinColumn(name: 'ItemID', referencedColumnName: 'ItemID')]
-    #[ORM\ManyToOne(targetEntity: \V3Items::class)]
+    #[ORM\ManyToOne(targetEntity: V3Items::class)]
     private $item;
 
     /**
      * @var \V3Attributes
      */
     #[ORM\JoinColumn(name: 'AttributeID', referencedColumnName: 'AttributeID')]
-    #[ORM\ManyToOne(targetEntity: \V3Attributes::class)]
+    #[ORM\ManyToOne(targetEntity: V3Attributes::class)]
     #[Groups(['v3_item:detail'])]
     private $attributeid;
 

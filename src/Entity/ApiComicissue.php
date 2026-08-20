@@ -89,8 +89,8 @@ class ApiComicissue
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'issue_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $issueCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'issue_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $issueCreatedAt = null;
 
     /**
      * @var int
@@ -101,8 +101,8 @@ class ApiComicissue
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'issue_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $issueLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'issue_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $issueLastModifiedAt = null;
 
     public function getIssueId(): ?int
     {

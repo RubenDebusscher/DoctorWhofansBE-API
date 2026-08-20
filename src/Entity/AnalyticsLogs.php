@@ -38,8 +38,8 @@ class AnalyticsLogs
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'PL_Timestamp', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $plTimestamp = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'PL_Timestamp', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $plTimestamp = null;
 
     /**
      * @var string|null

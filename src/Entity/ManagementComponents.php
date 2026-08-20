@@ -32,14 +32,14 @@ class ManagementComponents
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'component_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $componentCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'component_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $componentCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'component_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $componentLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'component_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $componentLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

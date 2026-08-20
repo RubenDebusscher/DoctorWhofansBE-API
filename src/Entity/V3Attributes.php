@@ -26,63 +26,64 @@ class V3Attributes
     #[ORM\Column(name: 'AttributeID', type: 'integer', nullable: false)]
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
-    #[Groups(['v3_item:detail'])]
+    #[Groups(['v3_item:detail','contenttype:read'])]
     private $attributeid;
 
     /**
      * @var string
      */
     #[ORM\Column(name: 'Name', type: 'string', length: 255, nullable: false)]
-    #[Groups(['v3_item:detail'])]
+    #[Groups(['v3_item:detail','contenttype:read'])]
     private $name;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'Description', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_item:detail'])]
+    #[Groups(['v3_item:detail','contenttype:read'])]
     private $description;
 
     /**
      * @var int
      */
-    #[ORM\Column(name: 'ValidationRuleID', type: 'integer', nullable: false)]
-    #[Groups(['v3_item:detail'])]
-    private $validationruleid;
+    #[ORM\ManyToOne(targetEntity: V3Validationrules::class)]
+    #[ORM\JoinColumn(name: 'ValidationRuleID', referencedColumnName: 'ValidationRuleID')]
+    #[Groups(['contenttype:read', 'v3_item:detail'])]
+    private ?V3Validationrules $validationrule = null;
 
     /**
      * @var bool
      */
     #[ORM\Column(name: 'Visibility', type: 'boolean', nullable: false, options: ['default' => '1'])]
-    #[Groups(['v3_item:detail'])]
+    #[Groups(['v3_item:detail','contenttype:read'])]
     private $visibility = true;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'LookupTable', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_item:detail'])]
+    #[Groups(['v3_item:detail','contenttype:read'])]
     private $lookuptable;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'BaseAttributes', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_item:detail'])]
+    #[Groups(['v3_item:detail','contenttype:read'])]
     private $baseattributes;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'Template', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_item:detail'])]
+    #[Groups(['v3_item:detail','contenttype:read'])]
     private $template;
 
     /**
      * @var bool|null
      */
     #[ORM\Column(name: 'Repeatable', type: 'boolean', nullable: true)]
-    #[Groups(['v3_item:detail'])]
+    #[Groups(['v3_item:detail','contenttype:read'])]
     private $repeatable;
 
     /**
@@ -94,8 +95,8 @@ class V3Attributes
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $createdAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $createdAt = null;
 
     /**
      * @var int
@@ -106,8 +107,8 @@ class V3Attributes
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'updated_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $updatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'updated_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $updatedAt = null;
 
     /**
      * @var \Doctrine\Common\Collections\Collection
@@ -302,6 +303,17 @@ class V3Attributes
     {
         $this->contenttypeid->removeElement($contenttypeid);
 
+        return $this;
+    }
+
+    public function getValidationrule(): ?V3Validationrules
+    {
+        return $this->validationrule;
+    }
+
+    public function setValidationrule(?V3Validationrules $validationrule): static
+    {
+        $this->validationrule = $validationrule;
         return $this;
     }
 

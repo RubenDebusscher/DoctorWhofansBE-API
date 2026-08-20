@@ -32,14 +32,14 @@ class ManagementCategories
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'category_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $categoryCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'category_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $categoryCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'category_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $categoryLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'category_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $categoryLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers
