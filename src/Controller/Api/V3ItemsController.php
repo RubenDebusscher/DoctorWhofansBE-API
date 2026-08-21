@@ -21,6 +21,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 #[Route('/api/v3/items')]
 class V3ItemsController extends AbstractController
 {
+
     #[Route('', methods: ['GET'])]
     public function index(V3ItemsRepository $repository): JsonResponse
     {
@@ -29,10 +30,10 @@ class V3ItemsController extends AbstractController
             Response::HTTP_OK,
             [],
             [
-                'groups' => ['v3_item:list'],
-                'circular_reference_handler' => function ($object) {
-                    return method_exists($object, 'getId') ? $object->getId() : null;
-                }
+            'groups' => ['v3_item:list'],
+            'circular_reference_handler' => function ($object) {
+                return method_exists($object, 'getId') ? $object->getId() : null;
+            }
             ]
         );
     }
@@ -49,14 +50,14 @@ class V3ItemsController extends AbstractController
             Response::HTTP_OK,
             [],
             [
-                'groups' => ['v3_item:list', 'v3_item:detail'],
-                AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
-                'circular_reference_handler' => function ($object) {
-                    if (method_exists($object, 'getItemid')) {
-                        return $object->getItemid();
-                    }
-                    return method_exists($object, 'getId') ? $object->getId() : null;
+            'groups' => ['v3_item:list', 'v3_item:detail'],
+            AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
+            'circular_reference_handler' => function ($object) {
+                if (method_exists($object, 'getItemid')) {
+                    return $object->getItemid();
                 }
+                return method_exists($object, 'getId') ? $object->getId() : null;
+            }
             ]
         );
     }
@@ -68,15 +69,13 @@ class V3ItemsController extends AbstractController
         ?V3Items $item,
         Request $request,
         SerializerInterface $serializer,
-        EntityManagerInterface $em,
-        AttributeValueManager $attrValueManager
+        EntityManagerInterface $em
     ): JsonResponse {
-
+        $cdnMountPath = $this->getParameter('cdn_mount_path');
         $item ??= new V3Items();
         $contentType = $request->headers->get('Content-Type', '');
-        $rawAttributes = [];
 
-        // SITUATIE A: FormData (Formulier)
+        // 1. DATA UITLEZEN (Ondersteunt JSON én FormData voor Image upload)
         if (str_contains($contentType, 'multipart/form-data')) {
             if ($request->request->has('itemName')) {
                 $item->setName($request->request->get('itemName'));
@@ -92,32 +91,44 @@ class V3ItemsController extends AbstractController
                 }
             }
 
-            if ($request->request->has('itemAttributes')) {
-                $attrInput = $request->request->get('itemAttributes');
-                $rawAttributes = is_string($attrInput) ? (json_decode($attrInput, true) ?? []) : $attrInput;
-            }
+            // Verwerk de fysieke afbeelding upload als deze in de FormData zit
+            $file = $request->files->get('image') ?? $request->files->get('file');
+            if ($file) {
+                // 1. Bouw het absolute pad op naar de map van het specifieke item
+                $targetDir = $cdnMountPath .'items/'. $item->getItemid();
 
+                // 2. Controleer of de map al bestaat; zo niet, maak deze aan
+                if (!is_dir($targetDir)) {
+                    // 0775 geeft lees- en schrijfrechten aan de eigenaar en de groep
+                    mkdir($targetDir, 0775, true);
+                }
+
+                // 3. Vaste bestandsnaam instellen
+                $filename = 'cover.jpg';
+
+                // 4. Verplaats het bestand (overschrijft automatisch als cover.jpg al bestaat)
+                $file->move($targetDir, $filename);
+
+                // 5. Sla het relatieve pad op in het Item-object voor de database
+                $item->setImage('items/' . $item->getItemid() . '/' . $filename);
+            }
         } else {
-            // SITUATIE B: Pure JSON
+            // Pure JSON
             $data = json_decode($request->getContent(), true) ?? [];
 
-            // 1. Isoleer attributes VOORDAT we ze denormaliseren
-            $rawAttributes = $data['itemAttributes'] ?? [];
-            unset($data['itemAttributes']);
-
-            // 2. Denormalizeer basisvelden
+            // Denormaliseer basisvelden (inclusief 'image' als pad/string meegegeven wordt!)
             $serializer->denormalize(
                 $data,
                 V3Items::class,
                 'json',
                 [
-                    'object_to_populate' => $item,
-                    'groups' => ['v3_item:write'],
-                    AbstractNormalizer::IGNORED_ATTRIBUTES => ['itemAttributes']
+                'object_to_populate' => $item,
+                'groups' => ['v3_item:write'],
+                AbstractNormalizer::IGNORED_ATTRIBUTES => ['itemAttributes']
                 ]
             );
 
-            // 3. Koppel de ContentType entiteit
+            // Koppel ContentType
             if (isset($data['type'])) {
                 $typeId = is_array($data['type']) ? ($data['type']['contenttypeid'] ?? null) : $data['type'];
                 if ($typeId) {
@@ -129,7 +140,7 @@ class V3ItemsController extends AbstractController
             }
         }
 
-        // Gebruikerscontext
+        // 2. GEBRUIKERSCONTEXT & AUDIT LOGGING
         $user = $this->getUser();
         $userId = $user && method_exists($user, 'getId') ? $user->getId() : 1;
 
@@ -144,72 +155,11 @@ class V3ItemsController extends AbstractController
             $item->setImage('');
         }
 
-        // Sla basisitem op zodat een nieuw item direct een ID krijgt
+        // 3. OPSLAAN
         $em->persist($item);
         $em->flush();
 
-        // --- STAP 2: ATTRIBUTEN VERWERKEN & SYNCHRONISEREN ---
-        if (!empty($rawAttributes) && is_array($rawAttributes)) {
-            $attrRepository = $em->getRepository(V3Attributes::class);
-            $now = new \DateTime();
-
-            // Haal de in-memory verzameling op van het item
-            $existingCollection = $item->getItemattributes();
-
-            foreach ($rawAttributes as $attrData) {
-                $attrId = $attrData['attributeid'] ?? ($attrData['attribute']['attributeid'] ?? null);
-
-                if (!$attrId) {
-                    continue;
-                }
-
-                $attrIdInt = (int)$attrId;
-
-                $attributeEntity = $attrRepository->find($attrIdInt);
-                if (!$attributeEntity) {
-                    continue;
-                }
-
-                // 1. VOORKOM DUBBELING: Check of dit attribuut al op het item bestaat
-                $itemAttrValue = null;
-                if ($existingCollection) {
-                    foreach ($existingCollection as $existing) {
-                        $linkedAttr = $existing->getAttributeid();
-                        if ($linkedAttr && $linkedAttr->getAttributeid() === $attrIdInt) {
-                            $itemAttrValue = $existing;
-                            break;
-                        }
-                    }
-                }
-
-                // 2. Maak een nieuw koppel-record aan als het nog niet bestaat
-                if (!$itemAttrValue) {
-                    $itemAttrValue = new V3Itemattributes();
-                    $itemAttrValue->setItem($item);
-                    $itemAttrValue->setAttributeid($attributeEntity);
-
-                    $itemAttrValue->setCreatedBy($userId);
-                    $itemAttrValue->setCreatedAt($now);
-
-                    // 3. SYNCHRONISEER MET IN-MEMORY COLLECTION voor direct kloppende JSON response
-                    if ($existingCollection) {
-                        $existingCollection->add($itemAttrValue);
-                    }
-                }
-
-                $itemAttrValue->setUpdatedBy($userId);
-                $itemAttrValue->setUpdatedAt($now);
-
-                // Geef de hele array mee aan de manager i.p.v. alleen een $val
-                $attrValueManager->assignValue($itemAttrValue, $attrData, $attributeEntity);
-
-                $em->persist($itemAttrValue);
-            }
-
-            $em->flush();
-        }
-
-        // Dwing Doctrine om alle relaties in-memory volledig te herladen
+        // Herlaad voor zuivere response
         $em->refresh($item);
 
         return $this->json(
