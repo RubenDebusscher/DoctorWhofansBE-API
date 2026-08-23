@@ -22,7 +22,7 @@ class V3Items
     #[ORM\Column(name: 'ItemID', type: 'integer', nullable: false)]
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
-    #[Groups(['v3_item:list', 'v3_item:detail'])]
+    #[Groups(['v3_item:list', 'v3_item:detail','v3_itemattributes:read'])]
     private ?int $itemid = null;
 
     #[ORM\Column(name: 'Name', type: 'string', length: 255, nullable: false)]
