@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Repository\ApiLookupConfigRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -13,12 +14,12 @@ use Symfony\Component\Routing\Annotation\Route;
 class GenericApiController extends AbstractController
 {
     private const ENTITY_MAP = [
-        'page-types' => \App\Entity\ManagementPagetypes::class,
-        'episodes'   => \App\Entity\ApiEpisodes::class,
-        'actors'     => \App\Entity\ApiActors::class,
-        'shows'      => \App\Entity\ApiShows::class,
-        'seasons'    => \App\Entity\ApiSeasons::class,
-        'managementusers'    => \App\Entity\ManagementUsers::class,
+        'page-types'      => \App\Entity\ManagementPagetypes::class,
+        'episodes'        => \App\Entity\ApiEpisodes::class,
+        'actors'          => \App\Entity\ApiActors::class,
+        'shows'           => \App\Entity\ApiShows::class,
+        'seasons'         => \App\Entity\ApiSeasons::class,
+        'managementusers' => \App\Entity\ManagementUsers::class,
         // Voeg hier de rest van je 70 entiteiten toe
     ];
 
@@ -33,9 +34,9 @@ class GenericApiController extends AbstractController
         $blockedEntities = ['managementusers', 'users'];
 
         if (in_array(strtolower($entitySlug), $blockedEntities, true)) {
-            // Vraag expliciet om authenticatie via Symfony security of geef 403 Forbidden
             $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         }
+
         $entityClass = $this->resolveEntityClass($entitySlug);
 
         if (!$entityClass) {
@@ -49,7 +50,6 @@ class GenericApiController extends AbstractController
         $repository = $this->entityManager->getRepository($entityClass);
         $entities = $repository->findBy([], null, $limit, $offset);
 
-        // Transformeer alle entiteiten automatisch
         $data = array_map(fn($item) => $this->normalizeEntity($item), $entities);
 
         return new JsonResponse($data, Response::HTTP_OK);
@@ -62,7 +62,6 @@ class GenericApiController extends AbstractController
         $blockedEntities = ['managementusers', 'users'];
 
         if (in_array(strtolower($entitySlug), $blockedEntities, true)) {
-            // Vraag expliciet om authenticatie via Symfony security of geef 403 Forbidden
             $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         }
 
@@ -79,13 +78,90 @@ class GenericApiController extends AbstractController
         return new JsonResponse($this->normalizeEntity($item), Response::HTTP_OK);
     }
 
-    /**
-     * Leest automatisch alle getXxx() methodes uit van het object en bouwt een simpele array.
-     * Voorkomt circular references en geheugenproblemen.
-     */
+    #[Route('/lookup/{entitySlug}', name: 'lookup_list', methods: ['GET'], priority: 10)]
+    public function lookupList(
+        string $entitySlug,
+        Request $request,
+        ApiLookupConfigRepository $configRepository,
+        EntityManagerInterface $em
+    ): JsonResponse {
+        // 1. Haal de instellingen op uit de database
+        $config = $configRepository->findBySlug($entitySlug);
+
+        if (!$config) {
+            return new JsonResponse(
+                ['error' => sprintf('Geen lookup-configuratie gevonden voor "%s".', $entitySlug)],
+                Response::HTTP_NOT_FOUND
+            );
+        }
+
+        $entityClass = $config->getEntityClass();
+        $idField = $config->getIdColumn();
+        $valueField = $config->getValueColumn();
+        $allowedFilters = $config->getAllowedFilters() ?? [];
+
+        $repository = $em->getRepository($entityClass);
+        $qb = $repository->createQueryBuilder('e');
+
+        $joinedRelations = [];
+
+        // 2. Beveiligd filteren via GET params
+        foreach ($request->query->all() as $param => $val) {
+            if ($val === null || $val === '') {
+                continue;
+            }
+
+            if (!in_array($param, $allowedFilters, true)) {
+                continue;
+            }
+
+            $rawVal = str_replace('+', ',', $val);
+            $isMultiple = str_contains($rawVal, ',');
+            $filterValue = $isMultiple ? array_map('trim', explode(',', $rawVal)) : $val;
+
+            // Directe kolom op de entiteit zelf
+            if (property_exists($entityClass, $param)) {
+                if ($isMultiple) {
+                    $qb->andWhere("e.{$param} IN (:{$param})")
+                        ->setParameter($param, $filterValue);
+                } else {
+                    $qb->andWhere("e.{$param} = :{$param}")
+                        ->setParameter($param, $filterValue);
+                }
+                continue;
+            }
+
+            // Relatie-filter via underscore (bijv. ?show_id=1)
+            if (str_contains($param, '_')) {
+                [$relation, $field] = explode('_', $param, 2);
+
+                if (property_exists($entityClass, $relation)) {
+                    if (!isset($joinedRelations[$relation])) {
+                        $qb->leftJoin("e.{$relation}", $relation);
+                        $joinedRelations[$relation] = true;
+                    }
+
+                    if ($isMultiple) {
+                        $qb->andWhere("{$relation}.{$field} IN (:{$param})")
+                            ->setParameter($param, $filterValue);
+                    } else {
+                        $qb->andWhere("{$relation}.{$field} = :{$param}")
+                            ->setParameter($param, $filterValue);
+                    }
+                }
+            }
+        }
+
+        // 3. Haal puur de ID en Value op voor generieke lookups (geen custom code-if-statements meer!)
+        $qb->select("e.{$idField} AS id, e.{$valueField} AS text");
+
+        $results = $qb->getQuery()->getArrayResult();
+
+        return new JsonResponse($results, Response::HTTP_OK);
+    }
+
     private function normalizeEntity(object $entity): array
     {
-        // Als de entiteit toch al JsonSerializable implementeert, gebruik die:
         if ($entity instanceof \JsonSerializable) {
             return $entity->jsonSerialize();
         }
@@ -96,21 +172,16 @@ class GenericApiController extends AbstractController
         foreach ($reflect->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
             $name = $method->getName();
 
-            // Zoek alleen naar getters zonder benodigde argumenten (getters/isGetters)
             if ((str_starts_with($name, 'get') || str_starts_with($name, 'is')) && $method->getNumberOfParameters() === 0) {
-
-                // Bepaal de key naam (bijv. getPagetypeName -> pagetypeName)
                 $prefixLength = str_starts_with($name, 'get') ? 3 : 2;
                 $key = lcfirst(substr($name, $prefixLength));
 
                 try {
                     $value = $method->invoke($entity);
 
-                    // Formatteer speciale types netjes voor JSON
                     if ($value instanceof \DateTimeInterface) {
                         $value = $value->format('Y-m-d H:i:s');
                     } elseif (is_object($value)) {
-                        // Voor gekoppelde entiteiten (relaties): pak enkel het ID i.p.v. het hele object
                         if (method_exists($value, 'getId')) {
                             $value = $value->getId();
                         } elseif (method_exists($value, 'getUserId')) {
@@ -122,7 +193,6 @@ class GenericApiController extends AbstractController
 
                     $data[$key] = $value;
                 } catch (\Throwable $e) {
-                    // Negeer methodes die een fout gooien bij aanroepen
                     continue;
                 }
             }

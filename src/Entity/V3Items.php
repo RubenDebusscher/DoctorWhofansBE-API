@@ -199,4 +199,32 @@ class V3Items
 
         return $this;
     }
+
+    /**
+     * Geeft alle attribute-definities terug die bij het ContentType van dit item horen,
+     * netjes gesorteerd op display_order.
+     */
+    public function getOrderedAttributes(): array
+    {
+        if (!$this->type) {
+            return [];
+        }
+
+        // $this->type->getAttributeContentTypes() bevat de V3AttributeContentTypes koppelingen
+        $links = $this->type->getAttributeContentTypes()->toArray();
+
+        // Sorteer de koppelingen op displayOrder
+        usort(
+            $links, function ($a, $b) {
+                return $a->getDisplayOrder() <=> $b->getDisplayOrder();
+            }
+        );
+
+        // Geef enkel de V3Attributes objecten terug
+        return array_map(
+            function ($link) {
+                return $link->getAttribute();
+            }, $links
+        );
+    }
 }

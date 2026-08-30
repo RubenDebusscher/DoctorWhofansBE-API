@@ -2,14 +2,13 @@
 
 namespace App\Entity;
 
-
-
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Serializer\Attribute\Ignore;
+use App\Entity\Code;
 
 /**
  * V3Attributes
@@ -26,111 +25,121 @@ class V3Attributes
     #[ORM\Column(name: 'AttributeID', type: 'integer', nullable: false)]
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
-    #[Groups(['v3_item:detail','contenttype:read','v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
     private $attributeid;
 
     /**
      * @var string
      */
     #[ORM\Column(name: 'Name', type: 'string', length: 255, nullable: false)]
-    #[Groups(['v3_item:detail','contenttype:read','v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
     private $name;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'Description', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_item:detail','contenttype:read','v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
     private $description;
 
     /**
-     * @var int
-     */
-    #[ORM\ManyToOne(targetEntity: V3Validationrules::class)]
-    #[ORM\JoinColumn(name: 'ValidationRuleID', referencedColumnName: 'ValidationRuleID')]
-    #[Groups(['contenttype:read', 'v3_item:detail','v3_itemattributes:read'])]
-    private ?V3Validationrules $validationrule = null;
+   * @var V3Codes|null
+   */
+    #[ORM\ManyToOne(targetEntity: Code::class)]
+    #[ORM\JoinColumn(name: 'ValidationRuleID', referencedColumnName: 'id')] // 👈 Verwijst in v3_codes naar kolom 'id'
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read'])]
+    private ?Code $validationrule = null;
 
     /**
      * @var bool
      */
     #[ORM\Column(name: 'Visibility', type: 'boolean', nullable: false, options: ['default' => '1'])]
-    #[Groups(['v3_item:detail','contenttype:read','v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
     private $visibility = true;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'LookupTable', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_item:detail','contenttype:read','v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
     private $lookuptable;
 
     /**
      * @var string|null
      */
+    #[ORM\Column(name: 'LookupTable2', type: 'text', length: 65535, nullable: true)]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
+    private ?string $lookuptable2 = null;
+
+    /**
+     * @var string|null
+     */
     #[ORM\Column(name: 'BaseAttributes', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_item:detail','contenttype:read','v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
     private $baseattributes;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'Template', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_item:detail','contenttype:read','v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
     private $template;
 
     /**
      * @var bool|null
      */
     #[ORM\Column(name: 'Repeatable', type: 'boolean', nullable: true)]
-    #[Groups(['v3_item:detail','contenttype:read','v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
     private $repeatable;
 
     /**
      * @var int
      */
     #[ORM\Column(name: 'created_by', type: 'integer', nullable: false)]
+    #[Groups(['v3_attributes:read'])]
     private $createdBy;
 
     /**
      * @var \DateTime
      */
     #[ORM\Column(name: 'created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    #[Groups(['v3_attributes:read'])]
     private $createdAt = null;
 
     /**
      * @var int
      */
     #[ORM\Column(name: 'updated_by', type: 'integer', nullable: false)]
+    #[Groups(['v3_attributes:read'])]
     private $updatedBy;
 
     /**
      * @var \DateTime
      */
     #[ORM\Column(name: 'updated_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    #[Groups(['v3_attributes:read'])]
     private $updatedAt = null;
 
     /**
-     * @var \Doctrine\Common\Collections\Collection
+     * Geen #[Groups] hier om de lus (Circular Reference) te breken!
+     *
+     * @var Collection<int, V3Contenttypes>
      */
     #[ORM\ManyToMany(targetEntity: \App\Entity\V3Contenttypes::class, inversedBy: 'attributeid')]
     #[ORM\JoinTable(
         name: 'V3__AttributeContentTypes',
         joinColumns: [
-        new ORM\JoinColumn(name: 'AttributeID', referencedColumnName: 'AttributeID')
+            new ORM\JoinColumn(name: 'AttributeID', referencedColumnName: 'AttributeID')
         ],
         inverseJoinColumns: [
-        new ORM\JoinColumn(name: 'ContentTypeID', referencedColumnName: 'ContentTypeID')
+            new ORM\JoinColumn(name: 'ContentTypeID', referencedColumnName: 'ContentTypeID')
         ]
     )]
     private $contenttypeid;
 
-    /**
-     * Constructor
-     */
     public function __construct()
     {
-        $this->contenttypeid = new \Doctrine\Common\Collections\ArrayCollection();
+        $this->contenttypeid = new ArrayCollection();
     }
 
     public function getAttributeid(): ?int
@@ -182,6 +191,18 @@ class V3Attributes
     public function setLookuptable(?string $lookuptable): static
     {
         $this->lookuptable = $lookuptable;
+
+        return $this;
+    }
+
+    public function getLookuptable2(): ?string
+    {
+        return $this->lookuptable2;
+    }
+
+    public function setLookuptable2(?string $lookuptable2): static
+    {
+        $this->lookuptable2 = $lookuptable2;
 
         return $this;
     }
@@ -294,15 +315,15 @@ class V3Attributes
         return $this;
     }
 
-    public function getValidationrule(): ?V3Validationrules
+    public function getValidationrule(): ?Code
     {
         return $this->validationrule;
     }
 
-    public function setValidationrule(?V3Validationrules $validationrule): static
+    public function setValidationrule(?Code $validationrule): static
     {
         $this->validationrule = $validationrule;
+
         return $this;
     }
-
 }

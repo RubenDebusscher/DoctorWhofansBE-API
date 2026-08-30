@@ -12,6 +12,7 @@
 .env
 .env.dev
 .env.production
+.env_old
 
 # OS / IDE specifieke bestanden
 .DS_Store

@@ -168,8 +168,7 @@ class V3ItemattributesController extends AbstractController
             }
         }
 
-        // --- 3. WAARDE TOEWIJZEN OP BASIS VAN VALIDATIONRULE ---
-        $rawVal = $data['value'] ?? $data['numbervalue'] ?? $data['boolvalue'] ?? $data['lookupvalue'] ?? $data['datevalue'] ?? null;
+        // --- 3. WAARDE TOEWIJZEN OP BASIS VAN VALIDATIONRULE LABEL EN SPECIFIEKE KEYS ---
 
         // Reset alle kolommen om te voorkomen dat oude/dubbele waarden achterblijven
         $entity->setValue(null);
@@ -178,39 +177,59 @@ class V3ItemattributesController extends AbstractController
         $entity->setLookupvalue(null);
         $entity->setDatevalue(null);
 
-        if ($rawVal !== null && $rawVal !== '') {
-            $ruleName = '';
+        // Bepaal de 'label' (het type invoer zoals 'number', 'lookup', etc.)
+        $ruleLabel = '';
+        if ($attribute && method_exists($attribute, 'getValidationrule')) {
+            $valRule = $attribute->getValidationrule();
 
-            if ($attribute && method_exists($attribute, 'getValidationrule')) {
-                $valRule = $attribute->getValidationrule();
-
-                if (is_object($valRule)) {
-                    if (method_exists($valRule, 'getName')) {
-                        $ruleName = $valRule->getName();
-                    } elseif (method_exists($valRule, 'getRule')) {
-                        $ruleName = $valRule->getRule();
-                    } elseif (method_exists($valRule, 'getType')) {
-                        $ruleName = $valRule->getType();
-                    } elseif (method_exists($valRule, 'getValue')) {
-                        $ruleName = $valRule->getValue();
-                    } elseif (method_exists($valRule, '__toString')) {
-                        $ruleName = (string) $valRule;
-                    }
-                } elseif (is_string($valRule)) {
-                    $ruleName = $valRule;
+            if (is_object($valRule)) {
+                if (method_exists($valRule, 'getLabel')) {
+                    $ruleLabel = $valRule->getLabel();
+                } elseif (method_exists($valRule, 'getName')) {
+                    $ruleLabel = $valRule->getName();
+                } elseif (method_exists($valRule, 'getType')) {
+                    $ruleLabel = $valRule->getType();
+                } elseif (method_exists($valRule, 'getValue')) {
+                    $ruleLabel = $valRule->getValue();
+                } elseif (method_exists($valRule, '__toString')) {
+                    $ruleLabel = (string) $valRule;
                 }
+            } elseif (is_string($valRule)) {
+                $ruleLabel = $valRule;
             }
+        }
 
-            $ruleStr = strtolower((string) $ruleName);
+        $typeStr = strtolower((string) $ruleLabel);
 
-            // Bepaal de juiste kolom op basis van de validation rule trefwoorden
-            if (str_contains($ruleStr, 'number') || str_contains($ruleStr, 'numeric') || str_contains($ruleStr, 'int') || str_contains($ruleStr, 'float')) {
+        // VOORKEUR 1: Als de JSON payload expliciet een specifiek veld bevat
+        if (array_key_exists('numbervalue', $data) && $data['numbervalue'] !== null && $data['numbervalue'] !== '') {
+            $entity->setNumbervalue((float) $data['numbervalue']);
+            return;
+        }
+        if (array_key_exists('lookupvalue', $data) && $data['lookupvalue'] !== null && $data['lookupvalue'] !== '') {
+            $entity->setLookupvalue((int) $data['lookupvalue']);
+            return;
+        }
+        if (array_key_exists('datevalue', $data) && $data['datevalue'] !== null && $data['datevalue'] !== '') {
+            $entity->setDatevalue(new \DateTime((string) $data['datevalue']));
+            return;
+        }
+        if (array_key_exists('boolvalue', $data) && $data['boolvalue'] !== null) {
+            $entity->setBoolvalue((bool) $data['boolvalue']);
+            return;
+        }
+
+        // VOORKEUR 2: Fallback via generic 'value' veld op basis van de validation rule label
+        $rawVal = $data['value'] ?? null;
+
+        if ($rawVal !== null && $rawVal !== '') {
+            if (str_contains($typeStr, 'number') || str_contains($typeStr, 'numeric') || str_contains($typeStr, 'int') || str_contains($typeStr, 'float')) {
                 $entity->setNumbervalue((float) $rawVal);
-            } elseif (str_contains($ruleStr, 'bool')) {
+            } elseif (str_contains($typeStr, 'bool')) {
                 $entity->setBoolvalue((bool) $rawVal);
-            } elseif (str_contains($ruleStr, 'date') || str_contains($ruleStr, 'time')) {
+            } elseif (str_contains($typeStr, 'date') || str_contains($typeStr, 'time')) {
                 $entity->setDatevalue(new \DateTime((string) $rawVal));
-            } elseif (str_contains($ruleStr, 'lookup') || str_contains($ruleStr, 'select')) {
+            } elseif (str_contains($typeStr, 'lookup') || str_contains($typeStr, 'select')) {
                 $entity->setLookupvalue((int) $rawVal);
             } else {
                 $entity->setValue((string) $rawVal);

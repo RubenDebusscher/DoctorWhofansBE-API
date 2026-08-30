@@ -40,14 +40,15 @@ class V3Validationrules
      * @var string
      */
     #[ORM\Column(name: 'Name', type: 'string', length: 255, nullable: false)]
-    #[Groups(['contenttype:read', 'v3_item:detail'])]
+    #[Groups(['contenttype:read', 'v3_item:detail','v3_attributes:read'])]
+
     private $name;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'Description', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['contenttype:read', 'v3_item:detail'])]
+    #[Groups(['contenttype:read', 'v3_item:detail','v3_attributes:read'])]
     private $description;
 
     /**

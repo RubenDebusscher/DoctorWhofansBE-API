@@ -9,6 +9,7 @@ use App\Entity\V3Items;
 use App\Repository\V3ItemsRepository;
 use App\Service\AttributeValueManager;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,19 +22,53 @@ use Symfony\Component\Serializer\SerializerInterface;
 #[Route('/api/v3/items')]
 class V3ItemsController extends AbstractController
 {
-
     #[Route('', methods: ['GET'])]
-    public function index(V3ItemsRepository $repository): JsonResponse
+    public function index(Request $request, EntityManagerInterface $em): JsonResponse
     {
+        // 1. Query parameters ophalen met defaults
+        $typeName = $request->query->get('type_name'); // e.g. "Serial" of "Serial,Episode"
+        $page = max(1, $request->query->getInt('page', 1));
+        $limit = min(100, max(1, $request->query->getInt('limit', 20))); // Max 100 items per pagina
+        $offset = ($page - 1) * $limit;
+
+        // 2. QueryBuilder opbouwen met JOIN naar type (voorkomt N+1 overhead)
+        $qb = $em->createQueryBuilder()
+            ->select('i', 't')
+            ->from(V3Items::class, 'i')
+            ->leftJoin('i.type', 't');
+
+        // 3. Optioneel filteren op type_name
+        if ($typeName !== null && $typeName !== '') {
+            $types = array_map('trim', explode(',', $typeName));
+            $qb->andWhere('LOWER(t.name) IN (:types)')
+                ->setParameter('types', array_map('strtolower', $types));
+        }
+
+        // 4. Paginering instellen
+        $qb->setFirstResult($offset)
+            ->setMaxResults($limit);
+
+        // 5. Resultaten en totaal aantal ophalen via Paginator
+        $paginator = new Paginator($qb->getQuery());
+        $totalItems = count($paginator);
+
         return $this->json(
-            $repository->findAll(),
+            [
+                'data' => iterator_to_array($paginator),
+                'meta' => [
+                    'page' => $page,
+                    'limit' => $limit,
+                    'total' => $totalItems,
+                    'pages' => (int) ceil($totalItems / $limit),
+                ]
+            ],
             Response::HTTP_OK,
             [],
             [
-            'groups' => ['v3_item:list'],
-            'circular_reference_handler' => function ($object) {
-                return method_exists($object, 'getId') ? $object->getId() : null;
-            }
+                'groups' => ['v3_item:list'],
+                'circular_reference_handler' => function ($object) {
+                    return method_exists($object, 'getId') ? $object->getId() : null;
+                }
             ]
         );
     }
@@ -50,14 +85,14 @@ class V3ItemsController extends AbstractController
             Response::HTTP_OK,
             [],
             [
-            'groups' => ['v3_item:list', 'v3_item:detail'],
-            AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
-            'circular_reference_handler' => function ($object) {
-                if (method_exists($object, 'getItemid')) {
-                    return $object->getItemid();
+                'groups' => ['v3_item:list', 'v3_item:detail'],
+                AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
+                'circular_reference_handler' => function ($object) {
+                    if (method_exists($object, 'getItemid')) {
+                        return $object->getItemid();
+                    }
+                    return method_exists($object, 'getId') ? $object->getId() : null;
                 }
-                return method_exists($object, 'getId') ? $object->getId() : null;
-            }
             ]
         );
     }
@@ -75,8 +110,9 @@ class V3ItemsController extends AbstractController
         $item ??= new V3Items();
         $contentType = $request->headers->get('Content-Type', '');
 
-        // 1. DATA UITLEZEN (Ondersteunt JSON én FormData voor Image upload)
+        // 1. DATA UITLEZEN
         if (str_contains($contentType, 'multipart/form-data')) {
+            // OPTIE A: Afbeelding Upload voor een BESTAAND item
             if ($request->request->has('itemName')) {
                 $item->setName($request->request->get('itemName'));
             } elseif ($request->request->has('name')) {
@@ -91,44 +127,49 @@ class V3ItemsController extends AbstractController
                 }
             }
 
-            // Verwerk de fysieke afbeelding upload als deze in de FormData zit
-            $file = $request->files->get('image') ?? $request->files->get('file');
-            if ($file) {
-                // 1. Bouw het absolute pad op naar de map van het specifieke item
-                $targetDir = $cdnMountPath .'items/'. $item->getItemid();
+            // Verwerk de fysieke afbeelding upload
+            $uploadedFile = $request->files->get('image') ?? $request->files->get('file');
+            if ($uploadedFile) {
+                $typeName = $item->getType() ? $item->getType()->getName() : 'General';
+                $itemId = $item->getItemid();
 
-                // 2. Controleer of de map al bestaat; zo niet, maak deze aan
+                // Bouw het pad op naar de specifieke map op het CDN
+                $targetDir = rtrim($cdnMountPath, '/') . '/items/' . $typeName . '/' . $itemId;
+
+                // Maak de map aan als deze nog niet bestaat
                 if (!is_dir($targetDir)) {
-                    // 0775 geeft lees- en schrijfrechten aan de eigenaar en de groep
-                    mkdir($targetDir, 0775, true);
+                    if (!mkdir($targetDir, 0777, true) && !is_dir($targetDir)) {
+                        throw new \RuntimeException(sprintf('Directory "%s" kan niet worden aangemaakt', $targetDir));
+                    }
                 }
 
-                // 3. Vaste bestandsnaam instellen
                 $filename = 'cover.jpg';
+                $targetPath = $targetDir . '/' . $filename;
+                $sourcePath = $uploadedFile->getPathname();
 
-                // 4. Verplaats het bestand (overschrijft automatisch als cover.jpg al bestaat)
-                $file->move($targetDir, $filename);
-
-                // 5. Sla het relatieve pad op in het Item-object voor de database
-                $item->setImage('items/' . $item->getItemid() . '/' . $filename);
+                // Kopiëren van temp-map naar de CDN mount
+                if (copy($sourcePath, $targetPath)) {
+                    @unlink($sourcePath); // Verwijder temp-bestand
+                    $item->setImage('items/' . $typeName . '/' . $itemId . '/' . $filename);
+                } else {
+                    throw new \RuntimeException(sprintf('Kan bestand niet kopiëren van %s naar %s', $sourcePath, $targetPath));
+                }
             }
         } else {
-            // Pure JSON
+            // OPTIE B: Gewone JSON POST/PUT (bv. bij initial creatie van het item)
             $data = json_decode($request->getContent(), true) ?? [];
 
-            // Denormaliseer basisvelden (inclusief 'image' als pad/string meegegeven wordt!)
             $serializer->denormalize(
                 $data,
                 V3Items::class,
                 'json',
                 [
-                'object_to_populate' => $item,
-                'groups' => ['v3_item:write'],
-                AbstractNormalizer::IGNORED_ATTRIBUTES => ['itemAttributes']
+                    'object_to_populate' => $item,
+                    'groups' => ['v3_item:write'],
+                    AbstractNormalizer::IGNORED_ATTRIBUTES => ['itemAttributes']
                 ]
             );
 
-            // Koppel ContentType
             if (isset($data['type'])) {
                 $typeId = is_array($data['type']) ? ($data['type']['contenttypeid'] ?? null) : $data['type'];
                 if ($typeId) {
@@ -142,8 +183,6 @@ class V3ItemsController extends AbstractController
 
         // 2. GEBRUIKERSCONTEXT & AUDIT LOGGING
         $user = $this->getUser();
-        $userId = $user && method_exists($user, 'getId') ? $user->getId() : 1;
-
         if (!$item->getItemid() && $user) {
             $item->setCreatedBy($user);
         }
@@ -155,11 +194,9 @@ class V3ItemsController extends AbstractController
             $item->setImage('');
         }
 
-        // 3. OPSLAAN
+        // 3. EENMALIG OPSLAAN IN DATABASE
         $em->persist($item);
         $em->flush();
-
-        // Herlaad voor zuivere response
         $em->refresh($item);
 
         return $this->json(

@@ -65,6 +65,14 @@ class V3Itemattributes
     #[Groups(['v3_itemattributes:read', 'v3_item:detail', 'v3_item:write'])]
     private ?int $lookupvalue = null;
 
+
+    /**
+     * @var int|null
+     */
+    #[ORM\Column(name: 'LookupValue2', type: 'integer', nullable: true)]
+    #[Groups(['v3_item:detail', 'v3_itemattributes:read'])]
+    private ?int $lookupvalue2 = null;
+
     /**
      * @var ManagementUsers|null
      */
@@ -185,9 +193,20 @@ class V3Itemattributes
         return $this->lookupvalue;
     }
 
+    public function getLookupvalue2(): ?int
+    {
+        return $this->lookupvalue2;
+    }
+
     public function setLookupvalue(?int $lookupvalue): static
     {
         $this->lookupvalue = $lookupvalue;
+        return $this;
+    }
+
+    public function setLookupvalue2(?int $lookupvalue2): static
+    {
+        $this->lookupvalue2 = $lookupvalue2;
         return $this;
     }
 
