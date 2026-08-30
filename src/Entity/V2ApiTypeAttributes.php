@@ -40,8 +40,8 @@ class V2ApiTypeAttributes
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'apiTA_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $apitaCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'apiTA_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $apitaCreatedAt = null;
 
     /**
      * @var int
@@ -52,8 +52,8 @@ class V2ApiTypeAttributes
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'apiTA_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $apitaLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'apiTA_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $apitaLastModifiedAt = null;
 
     /**
      * @var \V2ApiAttributes

@@ -47,14 +47,14 @@ class ApiComicline
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'line_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $lineCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'line_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $lineCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'line_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $lineLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'line_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $lineLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

@@ -62,14 +62,14 @@ class ContentItems
     /**
      * @var \DateTime|null
      */
-    #[ORM\Column(name: 'item_Created_at', type: 'datetime', nullable: true, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $itemCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'item_Created_at', type: 'datetime', nullable: true, options: ['default' => null])]
+    private $itemCreatedAt = null;
 
     /**
      * @var \DateTime|null
      */
-    #[ORM\Column(name: 'item_Last_modified_at', type: 'datetime', nullable: true, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $itemLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'item_Last_modified_at', type: 'datetime', nullable: true, options: ['default' => null])]
+    private $itemLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

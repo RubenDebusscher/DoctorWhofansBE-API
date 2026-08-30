@@ -22,10 +22,10 @@ class ManagementPagetypes implements JsonSerializable
     #[ORM\Column(name: 'pagetype_Description', type: 'string', length: 500, nullable: true)]
     private ?string $description = null;
 
-    #[ORM\Column(name: 'pagetype_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
+    #[ORM\Column(name: 'pagetype_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
     private ?\DateTimeInterface $createdAt = null;
 
-    #[ORM\Column(name: 'pagetype_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
+    #[ORM\Column(name: 'pagetype_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
     private ?\DateTimeInterface $lastModifiedAt = null;
 
     #[ORM\JoinColumn(name: 'pagetype_Owner_Id', referencedColumnName: 'user_Id')]

@@ -43,8 +43,8 @@ class LTypes
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'LT_Added', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $ltAdded = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'LT_Added', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $ltAdded = null;
 
     /**
      * @var int

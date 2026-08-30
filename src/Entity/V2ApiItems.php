@@ -43,14 +43,14 @@ class V2ApiItems
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'apiI_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $apiiCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'apiI_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $apiiCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'apiI_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $apiiLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'apiI_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $apiiLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

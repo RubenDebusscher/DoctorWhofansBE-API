@@ -2,31 +2,73 @@
 
 namespace App\Controller\Api;
 
+use App\Entity\V3Attributes;
+use App\Entity\V3Contenttypes;
+use App\Entity\V3Itemattributes;
 use App\Entity\V3Items;
 use App\Repository\V3ItemsRepository;
+use App\Service\AttributeValueManager;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
+use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route('/api/v3/items')]
 class V3ItemsController extends AbstractController
 {
     #[Route('', methods: ['GET'])]
-    public function index(V3ItemsRepository $repository): JsonResponse
+    public function index(Request $request, EntityManagerInterface $em): JsonResponse
     {
+        // 1. Query parameters ophalen met defaults
+        $typeName = $request->query->get('type_name'); // e.g. "Serial" of "Serial,Episode"
+        $page = max(1, $request->query->getInt('page', 1));
+        $limit = min(100, max(1, $request->query->getInt('limit', 20))); // Max 100 items per pagina
+        $offset = ($page - 1) * $limit;
+
+        // 2. QueryBuilder opbouwen met JOIN naar type (voorkomt N+1 overhead)
+        $qb = $em->createQueryBuilder()
+            ->select('i', 't')
+            ->from(V3Items::class, 'i')
+            ->leftJoin('i.type', 't');
+
+        // 3. Optioneel filteren op type_name
+        if ($typeName !== null && $typeName !== '') {
+            $types = array_map('trim', explode(',', $typeName));
+            $qb->andWhere('LOWER(t.name) IN (:types)')
+                ->setParameter('types', array_map('strtolower', $types));
+        }
+
+        // 4. Paginering instellen
+        $qb->setFirstResult($offset)
+            ->setMaxResults($limit);
+
+        // 5. Resultaten en totaal aantal ophalen via Paginator
+        $paginator = new Paginator($qb->getQuery());
+        $totalItems = count($paginator);
+
         return $this->json(
-            $repository->findAll(),
+            [
+                'data' => iterator_to_array($paginator),
+                'meta' => [
+                    'page' => $page,
+                    'limit' => $limit,
+                    'total' => $totalItems,
+                    'pages' => (int) ceil($totalItems / $limit),
+                ]
+            ],
             Response::HTTP_OK,
             [],
             [
-            'groups' => ['v3_item:list'], // <--- VOEG DIT TOE (kies je eigen groepnaam)
-            'circular_reference_handler' => function ($object) {
-                return method_exists($object, 'getId') ? $object->getId() : null;
-            }
+                'groups' => ['v3_item:list'],
+                'circular_reference_handler' => function ($object) {
+                    return method_exists($object, 'getId') ? $object->getId() : null;
+                }
             ]
         );
     }
@@ -43,53 +85,137 @@ class V3ItemsController extends AbstractController
             Response::HTTP_OK,
             [],
             [
-            'groups' => ['v3_item:list', 'v3_item:detail'],
-            AbstractObjectNormalizer::SKIP_NULL_VALUES => true, // Slaat alle null-velden over
-            'circular_reference_handler' => function ($object) {
-                if (method_exists($object, 'getItemid')) {
-                    return $object->getItemid();
+                'groups' => ['v3_item:list', 'v3_item:detail'],
+                AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
+                'circular_reference_handler' => function ($object) {
+                    if (method_exists($object, 'getItemid')) {
+                        return $object->getItemid();
+                    }
+                    return method_exists($object, 'getId') ? $object->getId() : null;
                 }
-                return method_exists($object, 'getId') ? $object->getId() : null;
-            }
             ]
         );
     }
 
-    // 3. CREATE (POST) & UPDATE (PUT)
+    // CREATE (POST) & UPDATE (POST / PUT)
     #[Route('', methods: ['POST'])]
-    #[Route('/{id}', methods: ['PUT'])]
+    #[Route('/{id}', methods: ['POST', 'PUT'])]
     public function save(
         ?V3Items $item,
         Request $request,
         SerializerInterface $serializer,
         EntityManagerInterface $em
     ): JsonResponse {
+        $cdnMountPath = $this->getParameter('cdn_mount_path');
         $item ??= new V3Items();
+        $contentType = $request->headers->get('Content-Type', '');
 
-        // Deserialiseer binnenkomende JSON en gebruik ALLEEN 'v3_item:write'
-        $serializer->deserialize(
-            $request->getContent(),
-            V3Items::class,
-            'json',
-            [
-                'object_to_populate' => $item,
-                'groups' => ['v3_item:write'] // Beschermt ID en createdBy tegen overschrijven!
-            ]
-        );
+        // 1. DATA UITLEZEN
+        if (str_contains($contentType, 'multipart/form-data')) {
+            // OPTIE A: Afbeelding Upload voor een BESTAAND item
+            if ($request->request->has('itemName')) {
+                $item->setName($request->request->get('itemName'));
+            } elseif ($request->request->has('name')) {
+                $item->setName($request->request->get('name'));
+            }
 
-        // Zelf de ingelogde gebruiker koppelen (veilig!)
-        if (!$item->getId()) {
-            $item->setCreatedBy($this->getUser());
+            if ($request->request->has('type')) {
+                $typeId = (int) $request->request->get('type');
+                $typeEntity = $em->getRepository(V3Contenttypes::class)->find($typeId);
+                if ($typeEntity) {
+                    $item->setType($typeEntity);
+                }
+            }
+
+            // Verwerk de fysieke afbeelding upload
+            $uploadedFile = $request->files->get('image') ?? $request->files->get('file');
+            if ($uploadedFile) {
+                $typeName = $item->getType() ? $item->getType()->getName() : 'General';
+                $itemId = $item->getItemid();
+
+                // Bouw het pad op naar de specifieke map op het CDN
+                $targetDir = rtrim($cdnMountPath, '/') . '/items/' . $typeName . '/' . $itemId;
+
+                // Maak de map aan als deze nog niet bestaat
+                if (!is_dir($targetDir)) {
+                    if (!mkdir($targetDir, 0777, true) && !is_dir($targetDir)) {
+                        throw new \RuntimeException(sprintf('Directory "%s" kan niet worden aangemaakt', $targetDir));
+                    }
+                }
+
+                $filename = 'cover.jpg';
+                $targetPath = $targetDir . '/' . $filename;
+                $sourcePath = $uploadedFile->getPathname();
+
+                // Kopiëren van temp-map naar de CDN mount
+                if (copy($sourcePath, $targetPath)) {
+                    @unlink($sourcePath); // Verwijder temp-bestand
+                    $item->setImage('items/' . $typeName . '/' . $itemId . '/' . $filename);
+                } else {
+                    throw new \RuntimeException(sprintf('Kan bestand niet kopiëren van %s naar %s', $sourcePath, $targetPath));
+                }
+            }
+        } else {
+            // OPTIE B: Gewone JSON POST/PUT (bv. bij initial creatie van het item)
+            $data = json_decode($request->getContent(), true) ?? [];
+
+            $serializer->denormalize(
+                $data,
+                V3Items::class,
+                'json',
+                [
+                    'object_to_populate' => $item,
+                    'groups' => ['v3_item:write'],
+                    AbstractNormalizer::IGNORED_ATTRIBUTES => ['itemAttributes']
+                ]
+            );
+
+            if (isset($data['type'])) {
+                $typeId = is_array($data['type']) ? ($data['type']['contenttypeid'] ?? null) : $data['type'];
+                if ($typeId) {
+                    $typeEntity = $em->getRepository(V3Contenttypes::class)->find((int)$typeId);
+                    if ($typeEntity) {
+                        $item->setType($typeEntity);
+                    }
+                }
+            }
         }
-        $item->setUpdatedBy($this->getUser());
 
+        // 2. GEBRUIKERSCONTEXT & AUDIT LOGGING
+        $user = $this->getUser();
+        if (!$item->getItemid() && $user) {
+            $item->setCreatedBy($user);
+        }
+        if ($user) {
+            $item->setUpdatedBy($user);
+        }
+
+        if ($item->getImage() === null) {
+            $item->setImage('');
+        }
+
+        // 3. EENMALIG OPSLAAN IN DATABASE
         $em->persist($item);
         $em->flush();
+        $em->refresh($item);
 
-        // Geef het opgeslagen object terug met de complete detail-groepen
         return $this->json(
-            $item, 200, [], [
-            'groups' => ['v3_item:list', 'v3_item:detail']
+            $item,
+            Response::HTTP_OK,
+            [],
+            [
+                'groups' => ['v3_item:list', 'v3_item:detail'],
+                AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
+                AbstractObjectNormalizer::ENABLE_MAX_DEPTH => true,
+                'circular_reference_handler' => function ($object) {
+                    if (method_exists($object, 'getItemid')) {
+                        return $object->getItemid();
+                    }
+                    if (method_exists($object, 'getContenttypeid')) {
+                        return $object->getContenttypeid();
+                    }
+                    return method_exists($object, 'getId') ? $object->getId() : null;
+                }
             ]
         );
     }
@@ -107,8 +233,6 @@ class V3ItemsController extends AbstractController
         return $this->json(null, Response::HTTP_NO_CONTENT);
     }
 
-
-
     #[Route('/{id}/history', methods: ['GET'])]
     public function history(int $id, EntityManagerInterface $em): JsonResponse
     {
@@ -119,14 +243,8 @@ class V3ItemsController extends AbstractController
             return $this->json(['error' => 'Item niet gevonden'], Response::HTTP_NOT_FOUND);
         }
 
-        // Haal alle log-entries voor dit specifieke item op
         $logs = $repo->getLogEntries($item);
 
         return $this->json($logs, Response::HTTP_OK);
     }
 }
-
-
-
-
-

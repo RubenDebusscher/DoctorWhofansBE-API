@@ -43,8 +43,8 @@ class ContentGallery
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'Gallery_Created_At', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $galleryCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'Gallery_Created_At', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $galleryCreatedAt = null;
 
     /**
      * @var \DateTime

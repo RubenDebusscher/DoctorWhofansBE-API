@@ -40,8 +40,8 @@ class ApiCharactersActors
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'AC_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $acCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'AC_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $acCreatedAt = null;
 
     /**
      * @var int
@@ -52,8 +52,8 @@ class ApiCharactersActors
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'AC_Last_modified', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $acLastModified = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'AC_Last_modified', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $acLastModified = null;
 
     /**
      * @var \ApiCharacters

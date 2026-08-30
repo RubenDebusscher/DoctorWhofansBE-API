@@ -22,14 +22,14 @@ class ManagementStringsLanguages
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'SL_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $slCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'SL_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $slCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'SL_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $slLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'SL_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $slLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

@@ -20,14 +20,14 @@ class ContentQuotesCharacters
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'QC_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $qcCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'QC_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $qcCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'QC_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $qcLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'QC_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $qcLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

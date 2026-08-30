@@ -20,14 +20,14 @@ class ManagementPagesCategories
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'PC_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $pcCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'PC_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $pcCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'PC_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $pcLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'PC_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $pcLastModifiedAt = null;
 
     /**
      * @var \ManagementCategories

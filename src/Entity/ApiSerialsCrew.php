@@ -26,14 +26,14 @@ class ApiSerialsCrew
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'serials_crew_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $serialsCrewCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'serials_crew_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $serialsCrewCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'serials_crew_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $serialsCrewLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'serials_crew_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $serialsCrewLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

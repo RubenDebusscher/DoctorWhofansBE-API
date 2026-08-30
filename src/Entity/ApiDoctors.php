@@ -52,14 +52,14 @@ class ApiDoctors
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'doctor_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $doctorCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'doctor_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $doctorCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'doctor_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $doctorLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'doctor_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $doctorLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

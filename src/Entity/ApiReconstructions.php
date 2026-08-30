@@ -40,8 +40,8 @@ class ApiReconstructions
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'reconstruction_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $reconstructionCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'reconstruction_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $reconstructionCreatedAt = null;
 
     /**
      * @var int
@@ -52,8 +52,8 @@ class ApiReconstructions
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'reconstruction_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $reconstructionLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'reconstruction_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $reconstructionLastModifiedAt = null;
 
     /**
      * @var \Doctrine\Common\Collections\Collection

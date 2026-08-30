@@ -21,14 +21,14 @@ class ContentVideodescriptionsLanguages
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'VL_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $vlCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'VL_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $vlCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'VL_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $vlLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'VL_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $vlLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

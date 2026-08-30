@@ -41,14 +41,14 @@ class V2ApiAttributevalues
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'apiAV_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $apiavCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'apiAV_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $apiavCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'apiAV_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $apiavLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'apiAV_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $apiavLastModifiedAt = null;
 
     /**
      * @var \DateTime

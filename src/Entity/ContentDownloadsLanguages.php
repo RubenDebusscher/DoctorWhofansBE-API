@@ -21,14 +21,14 @@ class ContentDownloadsLanguages
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'DL_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $dlCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'DL_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $dlCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'DL_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $dlLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'DL_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $dlLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

@@ -2,136 +2,46 @@
 
 namespace App\Entity;
 
-
-
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
-/**
- * V3Attributevalidationrules
- */
 #[ORM\Table(name: 'V3__AttributeValidationRules')]
-#[ORM\Index(name: 'updated_by', columns: ['updated_by'])]
-#[ORM\Index(name: 'V3__AttributeValidationRules_ibfk_2', columns: ['ValidationRuleID'])]
-#[ORM\Index(name: 'created_by', columns: ['created_by'])]
-#[ORM\Index(name: 'IDX_CA9F2EE150B2D108', columns: ['AttributeID'])]
 #[ORM\Entity]
-class V3Attributevalidationrules
+class V3AttributeValidationRules
 {
-    /**
-     * @var \DateTime
-     */
-    #[ORM\Column(name: 'created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $createdAt = 'CURRENT_TIMESTAMP';
-
-    /**
-     * @var \DateTime
-     */
-    #[ORM\Column(name: 'updated_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $updatedAt = 'CURRENT_TIMESTAMP';
-
-    /**
-     * @var \V3Attributes
-     */
-    #[ORM\JoinColumn(name: 'AttributeID', referencedColumnName: 'AttributeID')]
     #[ORM\Id]
-    #[ORM\GeneratedValue(strategy: 'NONE')]
-    #[ORM\OneToOne(targetEntity: \V3Attributes::class)]
-    private $attributeid;
+    #[ORM\ManyToOne(targetEntity: V3Attributes::class)]
+    #[ORM\JoinColumn(name: 'AttributeID', referencedColumnName: 'AttributeID', nullable: false, onDelete: 'CASCADE')]
+    private ?V3Attributes $attribute = null;
 
-    /**
-     * @var \ManagementUsers
-     */
-    #[ORM\JoinColumn(name: 'updated_by', referencedColumnName: 'user_Id')]
-    #[ORM\ManyToOne(targetEntity: \ManagementUsers::class)]
-    private $updatedBy;
-
-    /**
-     * @var \V3Validationrules
-     */
-    #[ORM\JoinColumn(name: 'ValidationRuleID', referencedColumnName: 'ValidationRuleID')]
     #[ORM\Id]
-    #[ORM\GeneratedValue(strategy: 'NONE')]
-    #[ORM\OneToOne(targetEntity: \V3Validationrules::class)]
-    private $validationruleid;
+    // 1. TargetEntity wijst NU naar V3Codes (i.p.v. V3Validationrules)
+    #[ORM\ManyToOne(targetEntity: V3Codes::class)]
+    // 2. Kolomnaam in DB blijft gewoon ValidationRuleID, maar wijst naar 'id' in v3_codes
+    #[ORM\JoinColumn(name: 'ValidationRuleID', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read'])]
+    private ?V3Codes $validationRule = null;
 
-    /**
-     * @var \ManagementUsers
-     */
-    #[ORM\JoinColumn(name: 'created_by', referencedColumnName: 'user_Id')]
-    #[ORM\ManyToOne(targetEntity: \ManagementUsers::class)]
-    private $createdBy;
-
-    public function getCreatedAt(): ?\DateTime
+    public function getAttribute(): ?V3Attributes
     {
-        return $this->createdAt;
+        return $this->attribute;
     }
 
-    public function setCreatedAt(\DateTime $createdAt): static
+    public function setAttribute(?V3Attributes $attribute): static
     {
-        $this->createdAt = $createdAt;
-
+        $this->attribute = $attribute;
         return $this;
     }
 
-    public function getUpdatedAt(): ?\DateTime
+    // De getter/setter houden gewoon de vertrouwde naam!
+    public function getValidationRule(): ?V3Codes
     {
-        return $this->updatedAt;
+        return $this->validationRule;
     }
 
-    public function setUpdatedAt(\DateTime $updatedAt): static
+    public function setValidationRule(?V3Codes $validationRule): static
     {
-        $this->updatedAt = $updatedAt;
-
+        $this->validationRule = $validationRule;
         return $this;
     }
-
-    public function getAttributeid(): ?V3Attributes
-    {
-        return $this->attributeid;
-    }
-
-    public function setAttributeid(V3Attributes $attributeid): static
-    {
-        $this->attributeid = $attributeid;
-
-        return $this;
-    }
-
-    public function getUpdatedBy(): ?ManagementUsers
-    {
-        return $this->updatedBy;
-    }
-
-    public function setUpdatedBy(?ManagementUsers $updatedBy): static
-    {
-        $this->updatedBy = $updatedBy;
-
-        return $this;
-    }
-
-    public function getValidationruleid(): ?V3Validationrules
-    {
-        return $this->validationruleid;
-    }
-
-    public function setValidationruleid(V3Validationrules $validationruleid): static
-    {
-        $this->validationruleid = $validationruleid;
-
-        return $this;
-    }
-
-    public function getCreatedBy(): ?ManagementUsers
-    {
-        return $this->createdBy;
-    }
-
-    public function setCreatedBy(?ManagementUsers $createdBy): static
-    {
-        $this->createdBy = $createdBy;
-
-        return $this;
-    }
-
-
 }

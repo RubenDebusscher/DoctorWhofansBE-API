@@ -66,14 +66,14 @@ class ManagementPages
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'page_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $pageCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'page_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $pageCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'page_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $pageLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'page_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $pageLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

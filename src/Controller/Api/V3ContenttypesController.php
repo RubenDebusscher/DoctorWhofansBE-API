@@ -10,24 +10,53 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
+use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 
-#[Route('/api/v3-contenttypes')]
+#[Route('/api/v3/contenttypes')]
 class V3ContenttypesController extends AbstractController
 {
     #[Route('', methods: ['GET'])]
     public function index(V3ContenttypesRepository $repository): JsonResponse
     {
-        return $this->json($repository->findAll());
+        return $this->json(
+            $repository->findAllWithRelations(), // <-- Hier de nieuwe query gebruiken!
+            Response::HTTP_OK,
+            [],
+            ['groups' => ['contenttype:read']]
+        );
     }
 
-    #[Route('/{id}', methods: ['GET'])]
-    public function show(?V3Contenttypes $entity): JsonResponse
+    #[Route('/{contenttypeid}', methods: ['GET'])]
+    public function show(#[MapEntity(mapping: ['contenttypeid' => 'contenttypeid'])] ?V3Contenttypes $entity): JsonResponse
     {
         if (!$entity) {
-            return $this->json(['error' => 'Item niet gevonden'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'ContentType niet gevonden'], Response::HTTP_NOT_FOUND);
         }
 
-        return $this->json($entity);
+        return $this->json(
+            $entity,
+            Response::HTTP_OK,
+            [],
+            [
+            AbstractNormalizer::GROUPS => ['contenttype:read'],
+            AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
+            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object) {
+                // Return een unieke identifier of string van het object om de lus te breken
+                if (method_exists($object, 'getContenttypeid')) {
+                    return $object->getContenttypeid();
+                }
+                if (method_exists($object, 'getAttributeid')) {
+                    return $object->getAttributeid();
+                }
+                if (method_exists($object, 'getId')) {
+                    return $object->getId();
+                }
+                return spl_object_hash($object);
+            },
+            ]
+        );
     }
 
     #[Route('', methods: ['POST'])]
@@ -36,36 +65,77 @@ class V3ContenttypesController extends AbstractController
         $data = $request->toArray();
         $entity = new V3Contenttypes();
 
-        // TODO: Map hier de velden van $data naar je entiteit setter methodes
-        // Bijvoorbeeld: $entity->setName($data['name'] ?? null);
+        // 1. Naam en Omschrijving
+        if (isset($data['name'])) {
+            $entity->setName($data['name']);
+        }
+        if (isset($data['description'])) {
+            $entity->setDescription($data['description']);
+        }
+
+        // 2. Datum stempels instellen
+        $now = new \DateTime();
+        $entity->setCreatedAt($now);
+        $entity->setUpdatedAt($now);
+
+        // 3. Optioneel: Ingelogde gebruiker toewijzen als createdBy / updatedBy
+        $user = $this->getUser();
+        if ($user instanceof \App\Entity\ManagementUsers) {
+            $entity->setCreatedBy($user);
+            $entity->setUpdatedBy($user);
+        }
 
         $em->persist($entity);
         $em->flush();
 
-        return $this->json($entity, Response::HTTP_CREATED);
+        return $this->json(
+            $entity,
+            Response::HTTP_CREATED,
+            [],
+            ['groups' => ['contenttype:read']]
+        );
     }
 
-    #[Route('/{id}', methods: ['PUT', 'PATCH'])]
+    #[Route('/{contenttypeid}', methods: ['PUT', 'PATCH'])]
     public function update(Request $request, ?V3Contenttypes $entity, EntityManagerInterface $em): JsonResponse
     {
         if (!$entity) {
-            return $this->json(['error' => 'Item niet gevonden'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'ContentType niet gevonden'], Response::HTTP_NOT_FOUND);
         }
 
         $data = $request->toArray();
 
-        // TODO: Update hier de velden van je entiteit via setters
+        if (array_key_exists('name', $data)) {
+            $entity->setName($data['name']);
+        }
+        if (array_key_exists('description', $data)) {
+            $entity->setDescription($data['description']);
+        }
+
+        // 2. Datum update stempel
+        $entity->setUpdatedAt(new \DateTime());
+
+        // 3. Optioneel: Ingelogde gebruiker toewijzen als updatedBy
+        $user = $this->getUser();
+        if ($user instanceof \App\Entity\ManagementUsers) {
+            $entity->setUpdatedBy($user);
+        }
 
         $em->flush();
 
-        return $this->json($entity);
+        return $this->json(
+            $entity,
+            Response::HTTP_OK,
+            [],
+            ['groups' => ['contenttype:read']]
+        );
     }
 
-    #[Route('/{id}', methods: ['DELETE'])]
+    #[Route('/{contenttypeid}', methods: ['DELETE'])]
     public function delete(?V3Contenttypes $entity, EntityManagerInterface $em): JsonResponse
     {
         if (!$entity) {
-            return $this->json(['error' => 'Item niet gevonden'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'ContentType niet gevonden'], Response::HTTP_NOT_FOUND);
         }
 
         $em->remove($entity);
@@ -73,4 +143,6 @@ class V3ContenttypesController extends AbstractController
 
         return $this->json(null, Response::HTTP_NO_CONTENT);
     }
+
+
 }

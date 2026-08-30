@@ -59,8 +59,8 @@ class V2ApiAttributes
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'apiA_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $apiaCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'apiA_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $apiaCreatedAt = null;
 
     /**
      * @var int
@@ -71,8 +71,8 @@ class V2ApiAttributes
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'apiA_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $apiaLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'apiA_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $apiaLastModifiedAt = null;
 
     public function getApiaId(): ?int
     {

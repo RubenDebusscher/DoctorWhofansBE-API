@@ -52,8 +52,8 @@ class ApiSerialsCharactersactors
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'serials_characters_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $serialsCharactersCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'serials_characters_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $serialsCharactersCreatedAt = null;
 
     /**
      * @var int
@@ -64,8 +64,8 @@ class ApiSerialsCharactersactors
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'serials_characters_Last_modified', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $serialsCharactersLastModified = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'serials_characters_Last_modified', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $serialsCharactersLastModified = null;
 
     /**
      * @var int

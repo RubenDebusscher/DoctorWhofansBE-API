@@ -22,14 +22,14 @@ class ContentItemsLanguages
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'IL_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $ilCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'IL_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $ilCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'IL_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $ilLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'IL_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $ilLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

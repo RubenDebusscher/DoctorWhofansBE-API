@@ -65,14 +65,14 @@ class ApiCharacters
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'character_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $characterCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'character_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $characterCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'character_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $characterLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'character_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $characterLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers

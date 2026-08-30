@@ -45,14 +45,14 @@ class ContentDownloads
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'download_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $downloadCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'download_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $downloadCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'download_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $downloadLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'download_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $downloadLastModifiedAt = null;
 
     /**
      * @var \ManagementPages

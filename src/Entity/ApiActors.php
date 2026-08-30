@@ -69,14 +69,14 @@ class ApiActors
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'actor_Created_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $actorCreatedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'actor_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $actorCreatedAt = null;
 
     /**
      * @var \DateTime
      */
-    #[ORM\Column(name: 'actor_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => 'CURRENT_TIMESTAMP'])]
-    private $actorLastModifiedAt = 'CURRENT_TIMESTAMP';
+    #[ORM\Column(name: 'actor_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
+    private $actorLastModifiedAt = null;
 
     /**
      * @var \ManagementUsers
