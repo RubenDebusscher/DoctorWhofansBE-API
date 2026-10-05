@@ -3,7 +3,7 @@
 namespace App\Controller\Api;
 
 use App\Entity\V3Attributes;
-use App\Entity\V3Validationrules;
+use App\Entity\Code;
 use App\Repository\V3AttributesRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -77,16 +77,18 @@ class V3AttributesController extends AbstractController
             $entity->setRepeatable($data['repeatable'] !== null ? (bool) $data['repeatable'] : null);
         }
 
-        // Koppeling met ValidationRule (indien meegegeven als ID)
-        if (!empty($data['validationrule_id'])) {
-            $validationRule = $em->getRepository(V3Validationrules::class)->find($data['validationrule_id']);
+        // Flexibele check voor ValidationRuleID (ondersteunt camelCase, snake_case en PascalCase)
+        $ruleId = $data['validationruleId'] ?? $data['validationrule_id'] ?? $data['ValidationRuleID'] ?? null;
+
+        if ($ruleId !== null) {
+            $validationRule = $em->getRepository(Code::class)->find($ruleId);
             if ($validationRule) {
                 $entity->setValidationrule($validationRule);
             }
         }
 
         // Audit-velden
-        $userId = $data['created_by'] ?? 1; // Pas aan naar eventueel $this->getUser()->getId()
+        $userId = $data['created_by'] ?? 1;
         $now = new \DateTime();
 
         $entity->setCreatedBy($userId);
@@ -140,12 +142,18 @@ class V3AttributesController extends AbstractController
             $entity->setRepeatable($data['repeatable'] !== null ? (bool) $data['repeatable'] : null);
         }
 
-        // Update ValidationRule relatie
-        if (array_key_exists('validationrule_id', $data)) {
-            if ($data['validationrule_id'] === null) {
+        // Update ValidationRule relatie flexibel afhandelen
+        $hasRuleKey = array_key_exists('validationruleId', $data)
+            || array_key_exists('validationrule_id', $data)
+            || array_key_exists('ValidationRuleID', $data);
+
+        if ($hasRuleKey) {
+            $ruleId = $data['validationruleId'] ?? $data['validationrule_id'] ?? $data['ValidationRuleID'] ?? null;
+
+            if ($ruleId === null) {
                 $entity->setValidationrule(null);
             } else {
-                $validationRule = $em->getRepository(V3Validationrules::class)->find($data['validationrule_id']);
+                $validationRule = $em->getRepository(Code::class)->find($ruleId);
                 if ($validationRule) {
                     $entity->setValidationrule($validationRule);
                 }

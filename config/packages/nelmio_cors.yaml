@@ -1,7 +1,11 @@
 nelmio_cors:
     defaults:
         origin_regex: true
-        allow_origin: ["%env(CORS_ALLOW_ORIGIN)%"]
+        allow_origin:
+            [
+                '^https?://(([a-z0-9-]+\.)?doctorwhofans\.test|localhost)(:[0-9]+)?$',
+            ]
+        allow_credentials: true
         allow_methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
         allow_headers:
             ["Content-Type", "Authorization", "Accept", "X-Requested-With"]
@@ -9,7 +13,12 @@ nelmio_cors:
         max_age: 3600
     paths:
         "^/api/":
-            allow_origin: ["*"] # Of specifiek: ['^https?://admin\.doctorwhofans\.test']
-            allow_headers: ["Content-Type", "Authorization", "Accept"]
-            allow_methods: ["POST", "PUT", "GET", "DELETE", "OPTIONS"]
+            allow_origin:
+                [
+                    '^https?://(([a-z0-9-]+\.)?doctorwhofans\.test|localhost)(:[0-9]+)?$',
+                ]
+            allow_credentials: true
+            allow_headers:
+                ["Content-Type", "Authorization", "Accept", "X-Requested-With"]
+            allow_methods: ["POST", "PUT", "GET", "DELETE", "OPTIONS", "PATCH"]
             max_age: 3600

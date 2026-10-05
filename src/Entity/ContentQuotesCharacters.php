@@ -46,10 +46,10 @@ class ContentQuotesCharacters
     /**
      * @var \ApiCharacters
      */
-    #[ORM\JoinColumn(name: 'QC_Character_Id', referencedColumnName: 'character_Id')]
+    #[ORM\JoinColumn(name: 'QC_Character_Id', referencedColumnName: 'ItemID')]
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'NONE')]
-    #[ORM\OneToOne(targetEntity: \ApiCharacters::class)]
+    #[ORM\OneToOne(targetEntity: \V3Items::class)]
     private $qcCharacter;
 
     /**

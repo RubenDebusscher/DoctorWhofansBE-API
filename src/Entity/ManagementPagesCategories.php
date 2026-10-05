@@ -2,8 +2,9 @@
 
 namespace App\Entity;
 
-
-
+use App\Entity\ManagementCategories;
+use App\Entity\ManagementPages;
+use App\Entity\ManagementUsers;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -30,35 +31,35 @@ class ManagementPagesCategories
     private $pcLastModifiedAt = null;
 
     /**
-     * @var \ManagementCategories
+     * @var ManagementCategories
      */
-    #[ORM\JoinColumn(name: 'PC_category_Id', referencedColumnName: 'category_Id')]
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'NONE')]
-    #[ORM\OneToOne(targetEntity: \ManagementCategories::class)]
+    #[ORM\ManyToOne(targetEntity: ManagementCategories::class)]
+    #[ORM\JoinColumn(name: 'PC_category_Id', referencedColumnName: 'category_Id', nullable: false)]
     private $pcCategory;
 
     /**
-     * @var \ManagementPages
+     * @var ManagementPages
      */
-    #[ORM\JoinColumn(name: 'PC_page_Id', referencedColumnName: 'page_Id')]
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'NONE')]
-    #[ORM\OneToOne(targetEntity: \ManagementPages::class)]
+    #[ORM\ManyToOne(targetEntity: ManagementPages::class, inversedBy: 'pageCategories')]
+    #[ORM\JoinColumn(name: 'PC_page_Id', referencedColumnName: 'page_Id', nullable: false)]
     private $pcPage;
 
     /**
-     * @var \ManagementUsers
+     * @var ManagementUsers|null
      */
     #[ORM\JoinColumn(name: 'PC_Last_modifier', referencedColumnName: 'user_Id')]
-    #[ORM\ManyToOne(targetEntity: \ManagementUsers::class)]
+    #[ORM\ManyToOne(targetEntity: ManagementUsers::class)]
     private $pcLastModifier;
 
     /**
-     * @var \ManagementUsers
+     * @var ManagementUsers|null
      */
     #[ORM\JoinColumn(name: 'PC_Owner_Id', referencedColumnName: 'user_Id')]
-    #[ORM\ManyToOne(targetEntity: \ManagementUsers::class)]
+    #[ORM\ManyToOne(targetEntity: ManagementUsers::class)]
     private $pcOwner;
 
     public function getPcCreatedAt(): ?\DateTime
@@ -90,7 +91,7 @@ class ManagementPagesCategories
         return $this->pcCategory;
     }
 
-    public function setPcCategory(ManagementCategories $pcCategory): static
+    public function setPcCategory(?ManagementCategories $pcCategory): static
     {
         $this->pcCategory = $pcCategory;
 
@@ -102,7 +103,7 @@ class ManagementPagesCategories
         return $this->pcPage;
     }
 
-    public function setPcPage(ManagementPages $pcPage): static
+    public function setPcPage(?ManagementPages $pcPage): static
     {
         $this->pcPage = $pcPage;
 
@@ -132,6 +133,4 @@ class ManagementPagesCategories
 
         return $this;
     }
-
-
 }

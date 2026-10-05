@@ -8,31 +8,31 @@ use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Serializer\Attribute\Ignore;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
-use Gedmo\Mapping\Annotation as Gedmo; // Importeer Gedmo
+use Gedmo\Mapping\Annotation as Gedmo;
 
 #[ORM\Table(name: 'V3__Items')]
 #[ORM\Index(name: 'Type', columns: ['Type'])]
 #[ORM\Index(name: 'created_by', columns: ['created_by'])]
 #[ORM\Index(name: 'updated_by', columns: ['updated_by'])]
-#[Gedmo\Loggable] // <-- Schakelt audit logging in voor V3Items
+#[Gedmo\Loggable]
 #[ORM\Entity]
-#[ORM\HasLifecycleCallbacks] // 1. Voeg dit attribuut toe aan de class
+#[ORM\HasLifecycleCallbacks]
 class V3Items
 {
     #[ORM\Column(name: 'ItemID', type: 'integer', nullable: false)]
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
-    #[Groups(['v3_item:list', 'v3_item:detail','v3_itemattributes:read'])]
+    #[Groups(['v3_item:list', 'v3_item:detail', 'v3_itemattributes:read','page:details', 'page:read'])]
     private ?int $itemid = null;
 
     #[ORM\Column(name: 'Name', type: 'string', length: 255, nullable: false)]
-    #[Groups(['v3_item:list', 'v3_item:detail', 'v3_item:write'])]
-    #[Gedmo\Versioned] // <-- Blijf wijzigingen in 'Name' volgen!
+    #[Groups(['v3_item:list', 'v3_item:detail', 'v3_item:write','page:details', 'page:read'])]
+    #[Gedmo\Versioned]
     private ?string $name = null;
 
-    #[ORM\Column(name: 'Image', type: 'string', length: 255, nullable: false)]
-    #[Groups(['v3_item:list', 'v3_item:detail', 'v3_item:write'])]
-    #[Gedmo\Versioned] // <-- Blijf wijzigingen in 'Name' volgen!
+    #[ORM\Column(name: 'Image', type: 'text', nullable: true)]
+    #[Groups(['v3_item:list', 'v3_item:detail', 'v3_item:write','page:details'])]
+    #[Gedmo\Versioned]
     private ?string $image = null;
 
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable', nullable: false)]
@@ -41,28 +41,29 @@ class V3Items
 
     #[ORM\Column(name: 'updated_at', type: 'datetime_immutable', nullable: false)]
     #[Groups(['v3_item:detail'])]
-    #[Gedmo\Versioned] // <-- Blijf wijzigingen in 'Name' volgen!
+    #[Gedmo\Versioned]
     private ?\DateTimeInterface $updatedAt = null;
 
-    #[ORM\JoinColumn(name: 'Type', referencedColumnName: 'ContentTypeID')]
-    #[ORM\ManyToOne(targetEntity: \V3Contenttypes::class)]
-    #[Groups(['v3_item:detail', 'v3_item:write','v3_item:list'])]
-    #[Gedmo\Versioned] // <-- Blijf wijzigingen in 'Name' volgen!
-    private ?V3Contenttypes $type = null;
+    // Koppeling naar de Code entity (waarin codeGroup_codeKey = ContentTypes)
+    #[ORM\JoinColumn(name: 'Type', referencedColumnName: 'id')]
+    #[ORM\ManyToOne(targetEntity: Code::class, cascade: ['persist'])]
+    #[Groups(['v3_item:detail', 'v3_item:write', 'v3_item:list','page:details'])]
+    #[Gedmo\Versioned]
+    private ?Code $type = null;
 
     #[ORM\JoinColumn(name: 'created_by', referencedColumnName: 'user_Id')]
-    #[ORM\ManyToOne(targetEntity: \ManagementUsers::class)]
+    #[ORM\ManyToOne(targetEntity: ManagementUsers::class)]
     #[Groups(['v3_item:detail'])]
     private ?ManagementUsers $createdBy = null;
 
     #[ORM\JoinColumn(name: 'updated_by', referencedColumnName: 'user_Id')]
-    #[ORM\ManyToOne(targetEntity: \ManagementUsers::class)]
+    #[ORM\ManyToOne(targetEntity: ManagementUsers::class)]
     #[Groups(['v3_item:detail'])]
-    #[Gedmo\Versioned] // <-- Blijf wijzigingen in 'Name' volgen!
+    #[Gedmo\Versioned]
     private ?ManagementUsers $updatedBy = null;
 
     #[ORM\OneToMany(mappedBy: 'item', targetEntity: V3Itemattributes::class, cascade: ['persist', 'remove'])]
-    #[Groups(['v3_item:detail', 'v3_item:write'])]
+    #[Groups(['v3_item:detail', 'v3_item:write','page:details'])]
     private Collection $itemAttributes;
 
     public function __construct()
@@ -72,9 +73,7 @@ class V3Items
         $this->updatedAt = new \DateTimeImmutable();
     }
 
-
-
-    #[ORM\PrePersist] // 2. Wordt 1x uitgevoerd bij het EERSTE aanmaken
+    #[ORM\PrePersist]
     public function onPrePersist(): void
     {
         if ($this->createdAt === null) {
@@ -83,13 +82,18 @@ class V3Items
         $this->updatedAt = new \DateTimeImmutable();
     }
 
-    #[ORM\PreUpdate] // 3. Wordt automatisch uitgevoerd bij ELKE latere opslagactie
+    #[ORM\PreUpdate]
     public function onPreUpdate(): void
     {
         $this->updatedAt = new \DateTimeImmutable();
     }
 
     public function getItemid(): ?int
+    {
+        return $this->itemid;
+    }
+
+    public function getId(): ?int
     {
         return $this->itemid;
     }
@@ -138,12 +142,12 @@ class V3Items
         return $this;
     }
 
-    public function getType(): ?V3Contenttypes
+    public function getType(): ?Code
     {
         return $this->type;
     }
 
-    public function setType(?V3Contenttypes $type): static
+    public function setType(?Code $type): static
     {
         $this->type = $type;
         return $this;
@@ -201,30 +205,127 @@ class V3Items
     }
 
     /**
-     * Geeft alle attribute-definities terug die bij het ContentType van dit item horen,
-     * netjes gesorteerd op display_order.
+     * Geeft alle attribute-definities terug die bij de Code (ContentType) van dit item horen,
+     * netjes gesorteerd op displayOrder.
      */
+    #[Groups(['page:details', 'item:read'])]
     public function getOrderedAttributes(): array
     {
         if (!$this->type) {
             return [];
         }
 
-        // $this->type->getAttributeContentTypes() bevat de V3AttributeContentTypes koppelingen
         $links = $this->type->getAttributeContentTypes()->toArray();
 
-        // Sorteer de koppelingen op displayOrder
         usort(
             $links, function ($a, $b) {
                 return $a->getDisplayOrder() <=> $b->getDisplayOrder();
             }
         );
 
-        // Geef enkel de V3Attributes objecten terug
         return array_map(
             function ($link) {
                 return $link->getAttribute();
             }, $links
         );
     }
+
+    /**
+     * Telt het totaal aantal gekoppelde attributen op basis van het Type (Code) van dit item.
+     */
+    #[Groups(['v3_item:list', 'v3_item:detail'])]
+    public function getTotalAttributesCount(): int
+    {
+        if (!$this->type) {
+            return 0;
+        }
+
+        return $this->type->getAttributeContentTypes()->count();
+    }
+
+    /**
+     * Telt het aantal UNIEKE ingevulde attributen van dit specifieke item.
+     */
+    #[Groups(['v3_item:list', 'v3_item:detail'])]
+    public function getFilledAttributesCount(): int
+    {
+        if ($this->itemAttributes->isEmpty()) {
+            return 0;
+        }
+
+        $countedAttributeIds = [];
+
+        foreach ($this->itemAttributes as $attrValue) {
+            $attrId = $attrValue->getAttributeid() ? $attrValue->getAttributeid()->getId() : null;
+
+            if (!$attrId || in_array($attrId, $countedAttributeIds, true)) {
+                continue;
+            }
+
+            if ($attrValue->getValue() !== null
+                || $attrValue->getNumbervalue() !== null
+                || $attrValue->getLookupvalue() !== null
+                || $attrValue->getDatevalue() !== null
+                || $attrValue->getBoolvalue() !== null
+            ) {
+                $countedAttributeIds[] = $attrId;
+            }
+        }
+
+        return count($countedAttributeIds);
+    }
+
+    /**
+     * Berekent het voortgangspercentage op basis van de twee bovenstaande getters.
+     */
+    #[Groups(['v3_item:list', 'v3_item:detail'])]
+    public function getCompletionPercentage(): int
+    {
+        $total = $this->getTotalAttributesCount();
+
+        if ($total === 0) {
+            return 0;
+        }
+
+        return (int) round(($this->getFilledAttributesCount() / $total) * 100);
+    }
+
+    // In src/Entity/V3Items.php
+
+    /**
+     * Zoekt specifiek naar de lookupvalue van een opgegeven attribuut ID.
+     */
+    public function getParentLookupValue(int $targetAttributeId): ?int
+    {
+        foreach ($this->getItemAttributes() as $attr) {
+            $attrEntity = method_exists($attr, 'getAttributeid') ? $attr->getAttributeid() : null;
+
+            $currentAttrId = is_object($attrEntity) && method_exists($attrEntity, 'getAttributeid')
+            ? $attrEntity->getAttributeid()
+            : $attrEntity;
+
+            if ((int) $currentAttrId === $targetAttributeId) {
+                return $attr->getLookupvalue();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Geeft de weergavenaam van het item terug (bijv. de naam of het ID).
+     */
+    public function getDisplayName(): string
+    {
+        if (method_exists($this, 'getName') && $this->getName()) {
+            return $this->getName();
+        }
+
+        return (string) $this->getItemid();
+    }
+
+
+
+
+
 }

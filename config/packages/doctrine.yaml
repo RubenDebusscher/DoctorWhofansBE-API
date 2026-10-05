@@ -1,39 +1,44 @@
 doctrine:
     dbal:
-        url: "%env(resolve:DATABASE_URL)%"
-        schema_filter: "~^(?!dataface__|.*__history)~"
+        default_connection: default
+        connections:
+            default:
+                url: "%env(resolve:DATABASE_URL)%"
+                # Filtert dataface__, __history en V3__AttributeContentTypes (case-insensitive flag 'i')
+                schema_filter: "~^(?!dataface__|.*__history)~i"
+                use_savepoints: true
         types:
             array: Doctrine\DBAL\Types\JsonType
-        # IMPORTANT: You MUST configure your server version,
-        # either here or in the DATABASE_URL env var (see .env file)
-        #server_version: '16'
 
-        profiling_collect_backtrace: "%kernel.debug%"
-        use_savepoints: true
     orm:
         auto_generate_proxy_classes: true
         enable_lazy_ghost_objects: true
-        report_fields_where_declared: true
-        validate_xml_mapping: true
-        naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
-        identity_generation_preferences:
-            Doctrine\DBAL\Platforms\PostgreSQLPlatform: identity
-        auto_mapping: true
-        mappings:
-            App:
-                type: attribute
-                is_bundle: false
-                dir: "%kernel.project_dir%/src/Entity"
-                prefix: 'App\Entity'
-                alias: App
-            GedmoLoggable:
-                type: attribute # of 'annotation' als je nog oudere annotations gebruikt
-                is_bundle: false
-                dir: "%kernel.project_dir%/vendor/gedmo/doctrine-extensions/src/Loggable/Entity"
-                prefix: 'Gedmo\Loggable\Entity'
-                alias: GedmoLoggable
+        default_entity_manager: default
         controller_resolver:
             auto_mapping: false
+        entity_managers:
+            default:
+                auto_mapping: true
+                report_fields_where_declared: true
+                validate_xml_mapping: true
+                naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
+                identity_generation_preferences:
+                    Doctrine\DBAL\Platforms\PostgreSQLPlatform: identity
+                dql:
+                    numeric_functions:
+                        CAST: DoctrineExtensions\Query\Mysql\Cast
+                mappings:
+                    App:
+                        type: attribute
+                        is_bundle: false
+                        dir: "%kernel.project_dir%/src/Entity"
+                        prefix: 'App\Entity'
+                        alias: App
+                    gedmo_loggable:
+                        type: attribute
+                        prefix: Gedmo\Loggable\Entity
+                        dir: "%kernel.project_dir%/vendor/gedmo/doctrine-extensions/src/Loggable/Entity"
+                        alias: GedmoLoggable
 
 when@test:
     doctrine:

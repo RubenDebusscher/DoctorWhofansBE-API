@@ -2,16 +2,17 @@
 
 namespace App\Controller\Api;
 
+use App\Entity\V3Attributes;
 use App\Entity\V3Itemattributes;
+use App\Entity\V3Items;
 use App\Repository\V3ItemattributesRepository;
+use App\Service\CalculatedExpressionEvaluator;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use App\Entity\V3Attributes;
-use App\Entity\V3Items;
 
 #[Route('/api/v3/itemattributes')]
 class V3ItemattributesController extends AbstractController
@@ -19,11 +20,10 @@ class V3ItemattributesController extends AbstractController
     #[Route('', methods: ['GET'])]
     public function index(V3ItemattributesRepository $repository): JsonResponse
     {
-        return $this->json(
-            $repository->findAll(), Response::HTTP_OK, [], [
-                'groups' => ['v3_itemattributes:read']
-            ]
-        );
+        $entities = $repository->findAll();
+        $data = array_map(fn($entity) => $this->formatEntityArray($entity), $entities);
+
+        return $this->json($data, Response::HTTP_OK);
     }
 
     #[Route('/{id}', methods: ['GET'])]
@@ -33,15 +33,11 @@ class V3ItemattributesController extends AbstractController
             return $this->json(['error' => 'Item niet gevonden'], Response::HTTP_NOT_FOUND);
         }
 
-        return $this->json(
-            $entity, Response::HTTP_OK, [], [
-                'groups' => ['v3_itemattributes:read']
-            ]
-        );
+        return $this->json($this->formatEntityArray($entity), Response::HTTP_OK);
     }
 
     #[Route('', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $em): JsonResponse
+    public function create(Request $request, EntityManagerInterface $em, CalculatedExpressionEvaluator $evaluator): JsonResponse
     {
         $data = $request->toArray();
         $entity = new V3Itemattributes();
@@ -55,48 +51,103 @@ class V3ItemattributesController extends AbstractController
         }
 
         $em->persist($entity);
+
+        // Herberekening uitvoeren op het gekoppelde hoofditem
+        $item = $entity->getItem();
+        if ($item) {
+            $evaluator->recalculateAndSaveForItem($item);
+        }
+
         $em->flush();
 
-        return $this->formatResponse($entity, Response::HTTP_CREATED);
+        return $this->json($this->buildResponseData($entity, $em), Response::HTTP_CREATED);
     }
 
     #[Route('/{id}', methods: ['PUT', 'PATCH'])]
-    public function update(Request $request, ?V3Itemattributes $entity, EntityManagerInterface $em): JsonResponse
+    public function update(Request $request, ?V3Itemattributes $entity, EntityManagerInterface $em, CalculatedExpressionEvaluator $evaluator): JsonResponse
     {
         if (!$entity) {
             return $this->json(['error' => 'Item niet gevonden'], Response::HTTP_NOT_FOUND);
         }
 
         $data = $request->toArray();
-        $this->mapDataToEntity($data, $entity, $em);
+        $this->mapDataToEntity($data, $entity, $em, false);
 
         $user = $this->getUser();
         if ($user) {
             $entity->setUpdatedBy($user);
         }
 
+        // Herberekening uitvoeren op het gekoppelde hoofditem
+        $item = $entity->getItem();
+        if ($item) {
+            $evaluator->recalculateAndSaveForItem($item);
+        }
+
         $em->flush();
 
-        return $this->formatResponse($entity, Response::HTTP_OK);
+        return $this->json($this->buildResponseData($entity, $em), Response::HTTP_OK);
     }
 
     #[Route('/{id}', methods: ['DELETE'])]
-    public function delete(?V3Itemattributes $entity, EntityManagerInterface $em): JsonResponse
+    public function delete(?V3Itemattributes $entity, EntityManagerInterface $em, CalculatedExpressionEvaluator $evaluator): JsonResponse
     {
         if (!$entity) {
             return $this->json(['error' => 'Item niet gevonden'], Response::HTTP_NOT_FOUND);
         }
 
+        $item = $entity->getItem();
+
         $em->remove($entity);
+
+        if ($item) {
+            $evaluator->recalculateAndSaveForItem($item);
+        }
+
         $em->flush();
 
         return $this->json(null, Response::HTTP_NO_CONTENT);
     }
 
     /**
-     * Hulpmethode om de JSON-response veilig op te bouwen zonder Circular Reference.
+     * Bouwt het responsobject op met de getters van het V3Items entiteit.
      */
-    private function formatResponse(V3Itemattributes $entity, int $status): JsonResponse
+    private function buildResponseData(V3Itemattributes $entity, EntityManagerInterface $em): array
+    {
+        $item = $entity->getItem();
+        $itemData = null;
+
+        if ($item) {
+            // Forceer Doctrine om de nieuwste relaties/waarden te synchroniseren
+            $em->refresh($item);
+
+            $total = method_exists($item, 'getTotalAttributesCount')
+                ? $item->getTotalAttributesCount()
+                : count($item->getItemAttributes());
+
+            $filled = method_exists($item, 'getFilledAttributesCount')
+                ? $item->getFilledAttributesCount()
+                : 0;
+
+            $percentage = method_exists($item, 'getCompletionPercentage')
+                ? $item->getCompletionPercentage()
+                : ($total > 0 ? (int) round(($filled / $total) * 100) : 0);
+
+            $itemData = [
+                'itemid'                 => $item->getItemid(),
+                'totalAttributesCount'  => $total,
+                'filledAttributesCount' => $filled,
+                'completionPercentage'  => $percentage,
+            ];
+        }
+
+        return [
+            'attribute' => $this->formatEntityArray($entity),
+            'item'      => $itemData,
+        ];
+    }
+
+    private function formatEntityArray(V3Itemattributes $entity): array
     {
         $itemId = null;
         if (method_exists($entity, 'getItem') && $entity->getItem() !== null) {
@@ -109,23 +160,28 @@ class V3ItemattributesController extends AbstractController
             $attrId = is_object($attr) && method_exists($attr, 'getAttributeid') ? $attr->getAttributeid() : $attr;
         }
 
-        return $this->json(
-            [
-            'id'          => $entity->getItemattributevalueid(),
-            'itemid'      => $itemId,
-            'attributeid' => $attrId,
-            'value'       => $entity->getValue(),
-            'numbervalue' => $entity->getNumbervalue(),
-            'boolvalue'   => method_exists($entity, 'isBoolvalue') ? $entity->isBoolvalue() : $entity->getBoolvalue(),
-            'lookupvalue' => $entity->getLookupvalue(),
-            'datevalue'   => $entity->getDatevalue() ? $entity->getDatevalue()->format('Y-m-d H:i:s') : null,
-            ], $status
-        );
+        $dateValue = $entity->getDatevalue();
+        if ($dateValue instanceof \DateTimeInterface) {
+            $dateValue = $dateValue->format('Y-m-d H:i:s');
+        }
+
+        return [
+            'id'              => $entity->getItemattributevalueid(),
+            'itemid'          => $itemId,
+            'attributeid'     => $attrId,
+            'value'           => $entity->getValue(),
+            'numbervalue'     => $entity->getNumbervalue(),
+            'boolvalue'       => method_exists($entity, 'isBoolvalue') ? $entity->isBoolvalue() : $entity->getBoolvalue(),
+            'lookupvalue'     => $entity->getLookupvalue(),
+            'lookupvalue2'    => $entity->getLookupvalue2(),
+            'calculatedvalue' => $entity->getCalculatedvalue(),
+            'datevalue'       => $dateValue,
+        ];
     }
 
-    private function mapDataToEntity(array $data, V3Itemattributes $entity, EntityManagerInterface $em): void
+    private function mapDataToEntity(array $data, V3Itemattributes $entity, EntityManagerInterface $em, bool $isNew = true): void
     {
-        // --- 1. ITEM KOPPELING (itemid) ---
+        // 1. Item koppeling
         $itemId = $data['itemid'] ?? $data['itemID'] ?? $data['item'] ?? null;
         if (is_array($itemId)) {
             $itemId = $itemId['itemid'] ?? $itemId['id'] ?? null;
@@ -133,17 +189,12 @@ class V3ItemattributesController extends AbstractController
 
         if ($itemId !== null) {
             $itemEntity = $em->getRepository(V3Items::class)->find($itemId);
-
             if ($itemEntity && method_exists($entity, 'setItem')) {
                 $entity->setItem($itemEntity);
-            } elseif ($itemEntity && method_exists($entity, 'setItemid')) {
-                $entity->setItemid($itemEntity);
-            } elseif (method_exists($entity, 'setItemid')) {
-                $entity->setItemid($itemId);
             }
         }
 
-        // --- 2. ATTRIBUUT KOPPELING (attributeid) ---
+        // 2. Attribuut koppeling
         $attrId = $data['attributeid'] ?? $data['attributeID'] ?? $data['attribute'] ?? null;
         if (is_array($attrId)) {
             $attrId = $attrId['attributeid'] ?? $attrId['id'] ?? null;
@@ -152,62 +203,37 @@ class V3ItemattributesController extends AbstractController
         $attribute = null;
         if ($attrId !== null) {
             $attribute = $em->getRepository(V3Attributes::class)->find($attrId);
-
             if ($attribute && method_exists($entity, 'setAttributeid')) {
                 $entity->setAttributeid($attribute);
-            } elseif ($attribute && method_exists($entity, 'setAttribute')) {
-                $entity->setAttribute($attribute);
             }
-        } else {
-            // BELANGRIJK VOOR PUT: Als attributeid niet meegestuurd wordt in de payload,
-            // halen we de gekoppelde V3Attributes entiteit direct uit het bestaande $entity object!
-            if (method_exists($entity, 'getAttributeid')) {
-                $attribute = $entity->getAttributeid();
-            } elseif (method_exists($entity, 'getAttribute')) {
-                $attribute = $entity->getAttribute();
-            }
+        } else if (method_exists($entity, 'getAttributeid')) {
+            $attribute = $entity->getAttributeid();
         }
 
-        // --- 3. WAARDE TOEWIJZEN OP BASIS VAN VALIDATIONRULE LABEL EN SPECIFIEKE KEYS ---
-
-        // Reset alle kolommen om te voorkomen dat oude/dubbele waarden achterblijven
-        $entity->setValue(null);
-        $entity->setNumbervalue(null);
-        $entity->setBoolvalue(null);
-        $entity->setLookupvalue(null);
-        $entity->setDatevalue(null);
-
-        // Bepaal de 'label' (het type invoer zoals 'number', 'lookup', etc.)
-        $ruleLabel = '';
-        if ($attribute && method_exists($attribute, 'getValidationrule')) {
-            $valRule = $attribute->getValidationrule();
-
-            if (is_object($valRule)) {
-                if (method_exists($valRule, 'getLabel')) {
-                    $ruleLabel = $valRule->getLabel();
-                } elseif (method_exists($valRule, 'getName')) {
-                    $ruleLabel = $valRule->getName();
-                } elseif (method_exists($valRule, 'getType')) {
-                    $ruleLabel = $valRule->getType();
-                } elseif (method_exists($valRule, 'getValue')) {
-                    $ruleLabel = $valRule->getValue();
-                } elseif (method_exists($valRule, '__toString')) {
-                    $ruleLabel = (string) $valRule;
-                }
-            } elseif (is_string($valRule)) {
-                $ruleLabel = $valRule;
-            }
+        // 3. Waarde toewijzen
+        if ($isNew) {
+            $entity->setValue(null);
+            $entity->setNumbervalue(null);
+            $entity->setBoolvalue(null);
+            $entity->setLookupvalue(null);
+            $entity->setLookupvalue2(null);
+            $entity->setDatevalue(null);
+            $entity->setCalculatedvalue(null);
         }
 
-        $typeStr = strtolower((string) $ruleLabel);
-
-        // VOORKEUR 1: Als de JSON payload expliciet een specifiek veld bevat
+        if (array_key_exists('calculatedvalue', $data) && $data['calculatedvalue'] !== null) {
+            $entity->setCalculatedvalue((string) $data['calculatedvalue']);
+            return;
+        }
         if (array_key_exists('numbervalue', $data) && $data['numbervalue'] !== null && $data['numbervalue'] !== '') {
             $entity->setNumbervalue((float) $data['numbervalue']);
             return;
         }
         if (array_key_exists('lookupvalue', $data) && $data['lookupvalue'] !== null && $data['lookupvalue'] !== '') {
             $entity->setLookupvalue((int) $data['lookupvalue']);
+            if (array_key_exists('lookupvalue2', $data) && $data['lookupvalue2'] !== null && $data['lookupvalue2'] !== '') {
+                $entity->setLookupvalue2((int) $data['lookupvalue2']);
+            }
             return;
         }
         if (array_key_exists('datevalue', $data) && $data['datevalue'] !== null && $data['datevalue'] !== '') {
@@ -219,11 +245,24 @@ class V3ItemattributesController extends AbstractController
             return;
         }
 
-        // VOORKEUR 2: Fallback via generic 'value' veld op basis van de validation rule label
+        // Fallback toewijzing via 'value'
+        $ruleLabel = '';
+        if ($attribute && method_exists($attribute, 'getValidationrule')) {
+            $valRule = $attribute->getValidationrule();
+            if (is_object($valRule) && method_exists($valRule, 'getLabel')) {
+                $ruleLabel = $valRule->getLabel();
+            } elseif (is_string($valRule)) {
+                $ruleLabel = $valRule;
+            }
+        }
+
+        $typeStr = strtolower((string) $ruleLabel);
         $rawVal = $data['value'] ?? null;
 
         if ($rawVal !== null && $rawVal !== '') {
-            if (str_contains($typeStr, 'number') || str_contains($typeStr, 'numeric') || str_contains($typeStr, 'int') || str_contains($typeStr, 'float')) {
+            if (str_contains($typeStr, 'calculated')) {
+                $entity->setCalculatedvalue((string) $rawVal);
+            } elseif (str_contains($typeStr, 'number') || str_contains($typeStr, 'numeric') || str_contains($typeStr, 'int') || str_contains($typeStr, 'float')) {
                 $entity->setNumbervalue((float) $rawVal);
             } elseif (str_contains($typeStr, 'bool')) {
                 $entity->setBoolvalue((bool) $rawVal);

@@ -15,12 +15,12 @@ class V3AttributeValidationRules
     private ?V3Attributes $attribute = null;
 
     #[ORM\Id]
-    // 1. TargetEntity wijst NU naar V3Codes (i.p.v. V3Validationrules)
-    #[ORM\ManyToOne(targetEntity: V3Codes::class)]
-    // 2. Kolomnaam in DB blijft gewoon ValidationRuleID, maar wijst naar 'id' in v3_codes
+    // 1. TargetEntity wijst NU naar Code (i.p.v. V3Validationrules)
+    #[ORM\ManyToOne(targetEntity: Code::class)]
+    // 2. Kolomnaam in DB blijft gewoon ValidationRuleID, maar wijst naar 'id' in v3_Code
     #[ORM\JoinColumn(name: 'ValidationRuleID', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
-    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read'])]
-    private ?V3Codes $validationRule = null;
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read','page:details'])]
+    private ?Code $validationRule = null;
 
     public function getAttribute(): ?V3Attributes
     {
@@ -34,12 +34,12 @@ class V3AttributeValidationRules
     }
 
     // De getter/setter houden gewoon de vertrouwde naam!
-    public function getValidationRule(): ?V3Codes
+    public function getValidationRule(): ?Code
     {
         return $this->validationRule;
     }
 
-    public function setValidationRule(?V3Codes $validationRule): static
+    public function setValidationRule(?Code $validationRule): static
     {
         $this->validationRule = $validationRule;
         return $this;

@@ -2,236 +2,373 @@
 
 namespace App\Entity;
 
-
-
+use App\Repository\ManagementPagesRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
-/**
- * ManagementPages
- */
+#[ORM\Entity(repositoryClass: ManagementPagesRepository::class)]
 #[ORM\Table(name: 'management__pages')]
-#[ORM\Index(name: 'Creator_idx', columns: ['page_Owner_Id'])]
-#[ORM\Index(name: 'Last_modifier_idx', columns: ['page_Last_modifier'])]
-#[ORM\Index(name: 'Page_Type_idx', columns: ['page_Type'])]
-#[ORM\Index(name: 'Parent_idx', columns: ['page_Parent_Id'])]
-#[ORM\UniqueConstraint(name: 'page_Id', columns: ['page_Id'])]
-#[ORM\Entity]
+#[ORM\HasLifecycleCallbacks]
 class ManagementPages
 {
-    /**
-     * @var int
-     */
-    #[ORM\Column(name: 'page_Id', type: 'integer', nullable: false)]
     #[ORM\Id]
-    #[ORM\GeneratedValue(strategy: 'IDENTITY')]
-    private $pageId;
+    #[ORM\GeneratedValue]
+    #[ORM\Column(name: 'page_Id', type: Types::INTEGER)]
+    #[Groups(['page:read', 'page:details'])]
+    private ?int $id = null;
+
+    #[ORM\Column(name: 'page_Name', type: Types::TEXT, nullable: true)]
+    #[Groups(['page:read', 'page:details'])]
+    private ?string $name = null;
+
+    #[ORM\Column(name: 'page_Slug', type: Types::STRING, length: 255, nullable: true)]
+    #[Groups(['page:read', 'page:details'])]
+    private ?string $slug = null;
+
+    #[ORM\Column(name: 'page_Link', type: Types::TEXT, nullable: true)]
+    #[Groups(['page:read', 'page:details'])]
+    private ?string $link = null;
+
+    #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'children')]
+    #[ORM\JoinColumn(name: 'page_Parent_Id', referencedColumnName: 'page_Id', nullable: true, onDelete: 'SET NULL')]
+    private ?self $parent = null;
+
+    #[ORM\OneToMany(mappedBy: 'parent', targetEntity: self::class)]
+    private Collection $children;
+
 
     /**
-     * @var string|null
-     */
-    #[ORM\Column(name: 'page_Name', type: 'text', length: 65535, nullable: true)]
-    private $pageName;
+ * @var Collection<int, ManagementPagesCategories>
+ */
+    #[ORM\OneToMany(mappedBy: 'pcPage', targetEntity: ManagementPagesCategories::class)]
+    private Collection $pageCategories;
+
+
+    #[ORM\Column(name: 'page_Active', type: Types::SMALLINT, nullable: true, options: ['default' => 1])]
+    #[Groups(['page:read', 'page:details'])]
+    private ?int $active = 1;
 
     /**
-     * @var string|null
+     * Koppeling met de Code entiteit (Codegroep: PAGE_STATUS -> bijv. draft, published, archived)
      */
-    #[ORM\Column(name: 'page_Link', type: 'text', length: 65535, nullable: true)]
-    private $pageLink;
+    #[ORM\ManyToOne(targetEntity: Code::class)]
+    #[ORM\JoinColumn(name: 'page_Status_Code_Id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    #[Groups(['page:read', 'page:details'])]
+    private ?Code $status = null;
+
+    #[ORM\Column(name: 'page_Order', type: Types::DECIMAL, precision: 19, scale: 4, nullable: true)]
+    #[Groups(['page:read'])]
+    private ?string $order = '0.0000';
+
+    // --- DYNAMISCH BLOCK CANVAS & SETTINGS (2x JSON) ---
+
+    #[ORM\Column(name: 'page_Blocks', type: Types::JSON, nullable: true)]
+    #[Groups(['page:read', 'page:details'])]
+    private ?array $blocks = [];
+
+    #[ORM\Column(name: 'page_Settings', type: Types::JSON, nullable: true)]
+    #[Groups(['page:read', 'page:details'])]
+    private ?array $settings = [];
+
+    // --- GEPLANDE PUBLICATIE / GELDIGHEID (2x DateTime) ---
+
+    #[ORM\Column(name: 'page_Valid_From', type: Types::DATETIME_MUTABLE, nullable: true)]
+    #[Groups(['page:read', 'page:details'])]
+    private ?\DateTimeInterface $validFrom = null;
+
+    #[ORM\Column(name: 'page_Valid_To', type: Types::DATETIME_MUTABLE, nullable: true)]
+    #[Groups(['page:read', 'page:details'])]
+    private ?\DateTimeInterface $validTo = null;
 
     /**
-     * @var bool|null
+     * Koppeling met het API Item (V3Items)
      */
-    #[ORM\Column(name: 'page_Active', type: 'boolean', nullable: true)]
-    private $pageActive;
+    #[ORM\ManyToOne(targetEntity: V3Items::class)]
+    #[ORM\JoinColumn(name: 'page_API_Item', referencedColumnName: 'ItemID', nullable: true, onDelete: 'SET NULL')]
+    #[Groups(['page:details'])]
+    private ?V3Items $apiItem = null;
 
     /**
-     * @var string|null
+     * 1 = Bewust geen API item gekoppeld (Systeempagina / Overzicht)
+     * 0 = Moet gekoppeld worden of is gekoppeld
      */
-    #[ORM\Column(name: 'page_Order', type: 'decimal', precision: 19, scale: 4, nullable: true)]
-    private $pageOrder;
+    #[ORM\Column(name: 'page_Ignore_API', type: Types::BOOLEAN, options: ['default' => false])]
+    #[Groups(['page:details', 'page:read'])]
+    private bool $ignoreApi = false;
 
-    /**
-     * @var int|null
-     */
-    #[ORM\Column(name: 'page_Type', type: 'integer', nullable: true)]
-    private $pageType;
+    // --- SEO METADATA ---
 
-    /**
-     * @var int
-     */
-    #[ORM\Column(name: 'page_API_Item', type: 'integer', nullable: false, options: ['comment' => 'Het Idit van het API Item van de prefix van de link'])]
-    private $pageApiItem;
+    #[ORM\Column(name: 'page_Meta_Title', type: Types::STRING, length: 255, nullable: true)]
+    #[Groups(['page:details'])]
+    private ?string $metaTitle = null;
 
-    /**
-     * @var \DateTime
-     */
-    #[ORM\Column(name: 'page_Created_at', type: 'datetime', nullable: false, options: ['default' => null])]
-    private $pageCreatedAt = null;
+    #[ORM\Column(name: 'page_Meta_Description', type: Types::TEXT, nullable: true)]
+    #[Groups(['page:details'])]
+    private ?string $metaDescription = null;
 
-    /**
-     * @var \DateTime
-     */
-    #[ORM\Column(name: 'page_Last_modified_at', type: 'datetime', nullable: false, options: ['default' => null])]
-    private $pageLastModifiedAt = null;
+    #[ORM\Column(name: 'page_OG_Image', type: Types::STRING, length: 500, nullable: true)]
+    #[Groups(['page:details'])]
+    private ?string $ogImage = null;
 
-    /**
-     * @var \ManagementUsers
-     */
-    #[ORM\JoinColumn(name: 'page_Last_modifier', referencedColumnName: 'user_Id')]
-    #[ORM\ManyToOne(targetEntity: \ManagementUsers::class)]
-    private $pageLastModifier;
+    // --- AUDIT TRAIL ---
 
-    /**
-     * @var \ManagementPages
-     */
-    #[ORM\JoinColumn(name: 'page_Parent_Id', referencedColumnName: 'page_Id')]
-    #[ORM\ManyToOne(targetEntity: \ManagementPages::class)]
-    private $pageParent;
+    #[ORM\ManyToOne(targetEntity: ManagementUsers::class)]
+    #[ORM\JoinColumn(name: 'page_Owner_Id', referencedColumnName: 'user_Id', nullable: true)]
+    private ?ManagementUsers $createdBy = null;
 
-    /**
-     * @var \ManagementUsers
-     */
-    #[ORM\JoinColumn(name: 'page_Owner_Id', referencedColumnName: 'user_Id')]
-    #[ORM\ManyToOne(targetEntity: \ManagementUsers::class)]
-    private $pageOwner;
+    #[ORM\Column(name: 'page_Created_at', type: Types::DATETIME_MUTABLE, options: ['default' => 'CURRENT_TIMESTAMP'])]
+    private ?\DateTimeInterface $createdAt = null;
 
-    public function getPageId(): ?int
+    #[ORM\ManyToOne(targetEntity: ManagementUsers::class)]
+    #[ORM\JoinColumn(name: 'page_Last_modifier', referencedColumnName: 'user_Id', nullable: true)]
+    private ?ManagementUsers $updatedBy = null;
+
+    #[ORM\Column(name: 'page_Last_modified_at', type: Types::DATETIME_MUTABLE, options: ['default' => 'CURRENT_TIMESTAMP'])]
+    private ?\DateTimeInterface $updatedAt = null;
+
+    public function __construct()
     {
-        return $this->pageId;
+        $this->children = new ArrayCollection();
+        $this->pageCategories = new ArrayCollection();
+        $this->createdAt = new \DateTime();
+        $this->updatedAt = new \DateTime();
     }
 
-    public function getPageName(): ?string
+    #[ORM\PreUpdate]
+    public function onPreUpdate(): void
     {
-        return $this->pageName;
+        $this->updatedAt = new \DateTime();
     }
 
-    public function setPageName(?string $pageName): static
-    {
-        $this->pageName = $pageName;
+    // --- GETTERS & SETTERS ---
 
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+    public function setName(?string $name): static
+    {
+        $this->name = $name; return $this;
+    }
+
+    public function getSlug(): ?string
+    {
+        return $this->slug;
+    }
+    public function setSlug(?string $slug): static
+    {
+        $this->slug = $slug; return $this;
+    }
+
+    public function getLink(): ?string
+    {
+        return $this->link;
+    }
+    public function setLink(?string $link): static
+    {
+        $this->link = $link; return $this;
+    }
+
+    #[Groups(['page:read'])]
+    public function getParent(): ?int
+    {
+        return $this->parent?->getId();
+    }
+    public function setParent(?self $parent): static
+    {
+        $this->parent = $parent; return $this;
+    }
+
+    /**
+     * @return Collection<int, self>
+     */
+    public function getChildren(): Collection
+    {
+        return $this->children;
+    }
+
+    public function addChild(self $child): static
+    {
+        if (!$this->children->contains($child)) {
+            $this->children->add($child);
+            $child->setParent($this);
+        }
         return $this;
     }
 
-    public function getPageLink(): ?string
+    public function getActive(): ?int
     {
-        return $this->pageLink;
+        return $this->active;
+    }
+    public function setActive(?int $active): static
+    {
+        $this->active = $active; return $this;
     }
 
-    public function setPageLink(?string $pageLink): static
+    public function getStatus(): ?Code
     {
-        $this->pageLink = $pageLink;
+        return $this->status;
+    }
 
+    public function setStatus(?Code $status): static
+    {
+        $this->status = $status;
         return $this;
     }
 
-    public function isPageActive(): ?bool
+    public function getOrder(): ?string
     {
-        return $this->pageActive;
+        return $this->order;
+    }
+    public function setOrder(?string $order): static
+    {
+        $this->order = $order; return $this;
     }
 
-    public function setPageActive(?bool $pageActive): static
+    public function getBlocks(): ?array
     {
-        $this->pageActive = $pageActive;
-
-        return $this;
+        return $this->blocks;
+    }
+    public function setBlocks(?array $blocks): static
+    {
+        $this->blocks = $blocks; return $this;
     }
 
-    public function getPageOrder(): ?string
+    public function getSettings(): ?array
     {
-        return $this->pageOrder;
+        return $this->settings;
+    }
+    public function setSettings(?array $settings): static
+    {
+        $this->settings = $settings; return $this;
     }
 
-    public function setPageOrder(?string $pageOrder): static
+    public function getValidFrom(): ?\DateTimeInterface
     {
-        $this->pageOrder = $pageOrder;
-
-        return $this;
+        return $this->validFrom;
+    }
+    public function setValidFrom(?\DateTimeInterface $validFrom): static
+    {
+        $this->validFrom = $validFrom; return $this;
     }
 
-    public function getPageType(): ?int
+    public function getValidTo(): ?\DateTimeInterface
     {
-        return $this->pageType;
+        return $this->validTo;
+    }
+    public function setValidTo(?\DateTimeInterface $validTo): static
+    {
+        $this->validTo = $validTo; return $this;
+    }
+    #[Groups(['page:details', 'page:read'])]
+    public function getApiItem(): ?V3Items
+    {
+        return $this->apiItem;
+    }
+    public function setApiItem(?V3Items $apiItem): static
+    {
+        $this->apiItem = $apiItem; return $this;
     }
 
-    public function setPageType(?int $pageType): static
+    public function isIgnoreApi(): bool
     {
-        $this->pageType = $pageType;
-
-        return $this;
+        return $this->ignoreApi;
+    }
+    public function setIgnoreApi(bool $ignoreApi): static
+    {
+        $this->ignoreApi = $ignoreApi; return $this;
     }
 
-    public function getPageApiItem(): ?int
+    public function getMetaTitle(): ?string
     {
-        return $this->pageApiItem;
+        return $this->metaTitle;
+    }
+    public function setMetaTitle(?string $metaTitle): static
+    {
+        $this->metaTitle = $metaTitle; return $this;
     }
 
-    public function setPageApiItem(int $pageApiItem): static
+    public function getMetaDescription(): ?string
     {
-        $this->pageApiItem = $pageApiItem;
-
-        return $this;
+        return $this->metaDescription;
+    }
+    public function setMetaDescription(?string $metaDescription): static
+    {
+        $this->metaDescription = $metaDescription; return $this;
     }
 
-    public function getPageCreatedAt(): ?\DateTime
+    public function getOgImage(): ?string
     {
-        return $this->pageCreatedAt;
+        return $this->ogImage;
+    }
+    public function setOgImage(?string $ogImage): static
+    {
+        $this->ogImage = $ogImage; return $this;
     }
 
-    public function setPageCreatedAt(\DateTime $pageCreatedAt): static
+    public function getCreatedBy(): ?ManagementUsers
     {
-        $this->pageCreatedAt = $pageCreatedAt;
-
-        return $this;
+        return $this->createdBy;
+    }
+    public function setCreatedBy(?ManagementUsers $createdBy): static
+    {
+        $this->createdBy = $createdBy; return $this;
     }
 
-    public function getPageLastModifiedAt(): ?\DateTime
+    public function getCreatedAt(): ?\DateTimeInterface
     {
-        return $this->pageLastModifiedAt;
+        return $this->createdAt;
+    }
+    public function setCreatedAt(\DateTimeInterface $createdAt): static
+    {
+        $this->createdAt = $createdAt; return $this;
     }
 
-    public function setPageLastModifiedAt(\DateTime $pageLastModifiedAt): static
+    public function getUpdatedBy(): ?ManagementUsers
     {
-        $this->pageLastModifiedAt = $pageLastModifiedAt;
-
-        return $this;
+        return $this->updatedBy;
+    }
+    public function setUpdatedBy(?ManagementUsers $updatedBy): static
+    {
+        $this->updatedBy = $updatedBy; return $this;
     }
 
-    public function getPageLastModifier(): ?ManagementUsers
+    public function getUpdatedAt(): ?\DateTimeInterface
     {
-        return $this->pageLastModifier;
+        return $this->updatedAt;
     }
-
-    public function setPageLastModifier(?ManagementUsers $pageLastModifier): static
+    public function setUpdatedAt(\DateTimeInterface $updatedAt): static
     {
-        $this->pageLastModifier = $pageLastModifier;
-
-        return $this;
-    }
-
-    public function getPageParent(): ?self
-    {
-        return $this->pageParent;
-    }
-
-    public function setPageParent(?self $pageParent): static
-    {
-        $this->pageParent = $pageParent;
-
-        return $this;
-    }
-
-    public function getPageOwner(): ?ManagementUsers
-    {
-        return $this->pageOwner;
-    }
-
-    public function setPageOwner(?ManagementUsers $pageOwner): static
-    {
-        $this->pageOwner = $pageOwner;
-
-        return $this;
+        $this->updatedAt = $updatedAt; return $this;
     }
 
 
+
+    /**
+ * Helper functie voor de API serializer
+ */
+    #[Groups(['page:details', 'page:read'])]
+    public function getCategories(): array
+    {
+        $categories = [];
+        foreach ($this->pageCategories as $relation) {
+            $cat = $relation->getPcCategory();
+            if ($cat) {
+                $categories[] = [
+                'id' => $cat->getCategoryId(),
+                'name' => $cat->getCategoryName(),
+                ];
+            }
+        }
+
+        return $categories;
+    }
 }

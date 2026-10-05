@@ -2,12 +2,8 @@
 
 namespace App\Controller\Api;
 
-use App\Entity\V3Attributes;
-use App\Entity\V3Contenttypes;
-use App\Entity\V3Itemattributes;
+use App\Entity\Code;
 use App\Entity\V3Items;
-use App\Repository\V3ItemsRepository;
-use App\Service\AttributeValueManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -25,50 +21,73 @@ class V3ItemsController extends AbstractController
     #[Route('', methods: ['GET'])]
     public function index(Request $request, EntityManagerInterface $em): JsonResponse
     {
-        // 1. Query parameters ophalen met defaults
-        $typeName = $request->query->get('type_name'); // e.g. "Serial" of "Serial,Episode"
-        $page = max(1, $request->query->getInt('page', 1));
-        $limit = min(100, max(1, $request->query->getInt('limit', 20))); // Max 100 items per pagina
+
+
+        // 1. Query parameters ophalen
+        $search = $request->query->get('q'); // <-- NIEUW: zoekterm ophalen
+        $typeName = $request->query->get('type_name');
+        $typeId = $request->query->get('type');
+        // Veilige manier om page en limit op te halen
+        $pageRaw = $request->query->get('page');
+        $limitRaw = $request->query->get('limit');
+
+        $page = is_numeric($pageRaw) ? max(1, (int) $pageRaw) : 1;
+        $limit = is_numeric($limitRaw) ? min(100, max(1, (int) $limitRaw)) : 20;
+
+        $offset = ($page - 1) * $limit;
         $offset = ($page - 1) * $limit;
 
-        // 2. QueryBuilder opbouwen met JOIN naar type (voorkomt N+1 overhead)
+        // 2. QueryBuilder opbouwen
         $qb = $em->createQueryBuilder()
-            ->select('i', 't')
+            ->select('i', 't', 'ia')
             ->from(V3Items::class, 'i')
-            ->leftJoin('i.type', 't');
+            ->leftJoin('i.type', 't')
+            ->leftJoin('i.itemAttributes', 'ia');
 
-        // 3. Optioneel filteren op type_name
+        // NIEUW: Zoeken op de naam van het item (Case-Insensitive)
+        if ($search !== null && trim($search) !== '') {
+            $qb->andWhere('LOWER(i.name) LIKE :query')
+                ->setParameter('query', '%' . strtolower(trim($search)) . '%');
+        }
+
+        // 3. Filteren op type_name of typeId
         if ($typeName !== null && $typeName !== '') {
             $types = array_map('trim', explode(',', $typeName));
-            $qb->andWhere('LOWER(t.name) IN (:types)')
+            $qb->andWhere('LOWER(t.codeValue) IN (:types) OR LOWER(t.label) IN (:types)')
                 ->setParameter('types', array_map('strtolower', $types));
+        }
+
+        if ($typeId !== null && $typeId !== '') {
+            $qb->andWhere('t.id = :typeId')
+                ->setParameter('typeId', (int) $typeId);
         }
 
         // 4. Paginering instellen
         $qb->setFirstResult($offset)
             ->setMaxResults($limit);
 
-        // 5. Resultaten en totaal aantal ophalen via Paginator
-        $paginator = new Paginator($qb->getQuery());
+        $paginator = new Paginator($qb->getQuery(), true);
         $totalItems = count($paginator);
+
+        $items = iterator_to_array($paginator);
 
         return $this->json(
             [
-                'data' => iterator_to_array($paginator),
-                'meta' => [
-                    'page' => $page,
-                    'limit' => $limit,
-                    'total' => $totalItems,
-                    'pages' => (int) ceil($totalItems / $limit),
-                ]
+            'data' => $items,
+            'meta' => [
+                'page' => $page,
+                'limit' => $limit,
+                'total' => $totalItems,
+                'pages' => (int) ceil($totalItems / $limit),
+            ]
             ],
             Response::HTTP_OK,
             [],
             [
-                'groups' => ['v3_item:list'],
-                'circular_reference_handler' => function ($object) {
-                    return method_exists($object, 'getId') ? $object->getId() : null;
-                }
+            'groups' => ['v3_item:list'],
+            'circular_reference_handler' => function ($object) {
+                return method_exists($object, 'getId') ? $object->getId() : null;
+            }
             ]
         );
     }
@@ -97,7 +116,6 @@ class V3ItemsController extends AbstractController
         );
     }
 
-    // CREATE (POST) & UPDATE (POST / PUT)
     #[Route('', methods: ['POST'])]
     #[Route('/{id}', methods: ['POST', 'PUT'])]
     public function save(
@@ -112,31 +130,29 @@ class V3ItemsController extends AbstractController
 
         // 1. DATA UITLEZEN
         if (str_contains($contentType, 'multipart/form-data')) {
-            // OPTIE A: Afbeelding Upload voor een BESTAAND item
             if ($request->request->has('itemName')) {
                 $item->setName($request->request->get('itemName'));
             } elseif ($request->request->has('name')) {
                 $item->setName($request->request->get('name'));
             }
 
-            if ($request->request->has('type')) {
-                $typeId = (int) $request->request->get('type');
-                $typeEntity = $em->getRepository(V3Contenttypes::class)->find($typeId);
+            if ($request->request->has('type') || $request->request->has('contenttypeid')) {
+                $typeId = (int) ($request->request->get('type') ?? $request->request->get('contenttypeid'));
+                $typeEntity = $em->getRepository(Code::class)->find($typeId);
                 if ($typeEntity) {
                     $item->setType($typeEntity);
                 }
             }
 
-            // Verwerk de fysieke afbeelding upload
             $uploadedFile = $request->files->get('image') ?? $request->files->get('file');
             if ($uploadedFile) {
-                $typeName = $item->getType() ? $item->getType()->getName() : 'General';
+                $typeName = $item->getType()
+                    ? ($item->getType()->getCodeValue() ?? $item->getType()->getLabel())
+                    : 'General';
                 $itemId = $item->getItemid();
 
-                // Bouw het pad op naar de specifieke map op het CDN
                 $targetDir = rtrim($cdnMountPath, '/') . '/items/' . $typeName . '/' . $itemId;
 
-                // Maak de map aan als deze nog niet bestaat
                 if (!is_dir($targetDir)) {
                     if (!mkdir($targetDir, 0777, true) && !is_dir($targetDir)) {
                         throw new \RuntimeException(sprintf('Directory "%s" kan niet worden aangemaakt', $targetDir));
@@ -147,16 +163,14 @@ class V3ItemsController extends AbstractController
                 $targetPath = $targetDir . '/' . $filename;
                 $sourcePath = $uploadedFile->getPathname();
 
-                // Kopiëren van temp-map naar de CDN mount
                 if (copy($sourcePath, $targetPath)) {
-                    @unlink($sourcePath); // Verwijder temp-bestand
+                    @unlink($sourcePath);
                     $item->setImage('items/' . $typeName . '/' . $itemId . '/' . $filename);
                 } else {
                     throw new \RuntimeException(sprintf('Kan bestand niet kopiëren van %s naar %s', $sourcePath, $targetPath));
                 }
             }
         } else {
-            // OPTIE B: Gewone JSON POST/PUT (bv. bij initial creatie van het item)
             $data = json_decode($request->getContent(), true) ?? [];
 
             $serializer->denormalize(
@@ -166,22 +180,28 @@ class V3ItemsController extends AbstractController
                 [
                     'object_to_populate' => $item,
                     'groups' => ['v3_item:write'],
-                    AbstractNormalizer::IGNORED_ATTRIBUTES => ['itemAttributes']
+                    AbstractNormalizer::IGNORED_ATTRIBUTES => ['itemAttributes', 'type']
                 ]
             );
 
+            $typeId = null;
             if (isset($data['type'])) {
-                $typeId = is_array($data['type']) ? ($data['type']['contenttypeid'] ?? null) : $data['type'];
-                if ($typeId) {
-                    $typeEntity = $em->getRepository(V3Contenttypes::class)->find((int)$typeId);
-                    if ($typeEntity) {
-                        $item->setType($typeEntity);
-                    }
+                $typeId = is_array($data['type'])
+                    ? ($data['type']['id'] ?? $data['type']['codeid'] ?? null)
+                    : $data['type'];
+            } elseif (isset($data['contenttypeid'])) {
+                $typeId = $data['contenttypeid'];
+            }
+
+            if ($typeId) {
+                $typeEntity = $em->getRepository(Code::class)->find((int)$typeId);
+                if ($typeEntity) {
+                    $item->setType($typeEntity);
                 }
             }
         }
 
-        // 2. GEBRUIKERSCONTEXT & AUDIT LOGGING
+        // 2. GEBRUIKERSCONTEXT
         $user = $this->getUser();
         if (!$item->getItemid() && $user) {
             $item->setCreatedBy($user);
@@ -194,7 +214,7 @@ class V3ItemsController extends AbstractController
             $item->setImage('');
         }
 
-        // 3. EENMALIG OPSLAAN IN DATABASE
+        // 3. OPSLAAN
         $em->persist($item);
         $em->flush();
         $em->refresh($item);
@@ -210,9 +230,6 @@ class V3ItemsController extends AbstractController
                 'circular_reference_handler' => function ($object) {
                     if (method_exists($object, 'getItemid')) {
                         return $object->getItemid();
-                    }
-                    if (method_exists($object, 'getContenttypeid')) {
-                        return $object->getContenttypeid();
                     }
                     return method_exists($object, 'getId') ? $object->getId() : null;
                 }

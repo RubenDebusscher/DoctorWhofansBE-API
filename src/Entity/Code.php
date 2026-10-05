@@ -1,11 +1,13 @@
 <?php
+
 namespace App\Entity;
 
 use App\Repository\CodeRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
-use Symfony\Component\Serializer\Attribute\Ignore;
 
 #[ORM\Entity(repositoryClass: CodeRepository::class)]
 #[ORM\Table(name: 'codes')]
@@ -15,49 +17,70 @@ class Code
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER)]
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read', 'code:read','v3_item:list','page:read', 'page:details'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: CodeGroup::class, inversedBy: 'codes')]
     #[ORM\JoinColumn(name: 'code_group_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
-    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read', 'code:read','v3_item:list','page:read', 'page:details'])]
     private ?CodeGroup $codeGroup = null;
 
     #[ORM\Column(type: Types::STRING, length: 100)]
-    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read', 'code:read','v3_item:list','page:read', 'page:details'])]
     private string $codeValue;
 
     #[ORM\Column(type: Types::STRING, length: 255)]
-    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read', 'code:read','v3_item:list','page:read', 'page:details'])]
     private string $label;
 
     /**
      * Korte naam voor weergave in compacte UI elementen (bijv. badges, tabellen)
      */
     #[ORM\Column(type: Types::STRING, length: 100, nullable: true)]
-    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read', 'code:read','v3_item:list','page:read', 'page:details'])]
     private ?string $shortLabel = null;
 
+    /**
+     * Technische documentatie / notities voor ontwikkelaars en beheerders
+     */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read', 'code:read'])]
+    private ?string $developerDescription = null;
+
     #[ORM\Column(type: Types::INTEGER, options: ['default' => 0])]
-    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read', 'code:read'])]
     private int $displayOrder = 0;
 
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
-    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read', 'code:read'])]
     private bool $isActive = true;
 
     /**
      * Optionele einddatum. Na deze datum is de optie verlopen/gedesactiveerd.
      */
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
-    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read', 'code:read'])]
     private ?\DateTimeInterface $validUntil = null;
 
     /**
      * Flexibele parameters/extra data opgeslagen als JSON array/object
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
-    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read', 'code:read'])]
     private ?array $parameters = null;
+
+    /**
+     * @var Collection<int, V3AttributeContentTypes>
+     */
+    #[ORM\OneToMany(mappedBy: 'code', targetEntity: V3AttributeContentTypes::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['displayOrder' => 'ASC'])]
+    #[Groups(['contenttype:read', 'code:read'])]
+    private Collection $attributeContentTypes;
+
+    public function __construct()
+    {
+        $this->attributeContentTypes = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -108,6 +131,17 @@ class Code
         return $this;
     }
 
+    public function getDeveloperDescription(): ?string
+    {
+        return $this->developerDescription;
+    }
+
+    public function setDeveloperDescription(?string $developerDescription): static
+    {
+        $this->developerDescription = $developerDescription;
+        return $this;
+    }
+
     public function getDisplayOrder(): int
     {
         return $this->displayOrder;
@@ -121,7 +155,6 @@ class Code
 
     public function isIsActive(): bool
     {
-        // Als validUntil is ingesteld en in het verleden ligt, is de optie ook niet actief!
         if ($this->validUntil !== null && $this->validUntil < new \DateTime()) {
             return false;
         }
@@ -154,6 +187,35 @@ class Code
     public function setParameters(?array $parameters): static
     {
         $this->parameters = $parameters;
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, V3AttributeContentTypes>
+     */
+    public function getAttributeContentTypes(): Collection
+    {
+        return $this->attributeContentTypes;
+    }
+
+    public function addAttributeContentType(V3AttributeContentTypes $attributeContentType): static
+    {
+        if (!$this->attributeContentTypes->contains($attributeContentType)) {
+            $this->attributeContentTypes->add($attributeContentType);
+            $attributeContentType->setCode($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAttributeContentType(V3AttributeContentTypes $attributeContentType): static
+    {
+        if ($this->attributeContentTypes->removeElement($attributeContentType)) {
+            if ($attributeContentType->getCode() === $this) {
+                $attributeContentType->setCode(null);
+            }
+        }
+
         return $this;
     }
 }

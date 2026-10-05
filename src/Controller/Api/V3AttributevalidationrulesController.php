@@ -2,8 +2,8 @@
 
 namespace App\Controller\Api;
 
-use App\Entity\V3Attributevalidationrules;
-use App\Repository\V3AttributevalidationrulesRepository;
+use App\Entity\V3AttributeValidationRules;
+use App\Repository\V3AttributeValidationRulesRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -12,16 +12,16 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/v3-attributevalidationrules')]
-class V3AttributevalidationrulesController extends AbstractController
+class V3AttributeValidationRulesController extends AbstractController
 {
     #[Route('', methods: ['GET'])]
-    public function index(V3AttributevalidationrulesRepository $repository): JsonResponse
+    public function index(V3AttributeValidationRulesRepository $repository): JsonResponse
     {
         return $this->json($repository->findAll());
     }
 
     #[Route('/{id}', methods: ['GET'])]
-    public function show(?V3Attributevalidationrules $entity): JsonResponse
+    public function show(?V3AttributeValidationRules $entity): JsonResponse
     {
         if (!$entity) {
             return $this->json(['error' => 'Item niet gevonden'], Response::HTTP_NOT_FOUND);
@@ -34,7 +34,7 @@ class V3AttributevalidationrulesController extends AbstractController
     public function create(Request $request, EntityManagerInterface $em): JsonResponse
     {
         $data = $request->toArray();
-        $entity = new V3Attributevalidationrules();
+        $entity = new V3AttributeValidationRules();
 
         // TODO: Map hier de velden van $data naar je entiteit setter methodes
         // Bijvoorbeeld: $entity->setName($data['name'] ?? null);
@@ -46,7 +46,7 @@ class V3AttributevalidationrulesController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['PUT', 'PATCH'])]
-    public function update(Request $request, ?V3Attributevalidationrules $entity, EntityManagerInterface $em): JsonResponse
+    public function update(Request $request, ?V3AttributeValidationRules $entity, EntityManagerInterface $em): JsonResponse
     {
         if (!$entity) {
             return $this->json(['error' => 'Item niet gevonden'], Response::HTTP_NOT_FOUND);
@@ -62,7 +62,7 @@ class V3AttributevalidationrulesController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['DELETE'])]
-    public function delete(?V3Attributevalidationrules $entity, EntityManagerInterface $em): JsonResponse
+    public function delete(?V3AttributeValidationRules $entity, EntityManagerInterface $em): JsonResponse
     {
         if (!$entity) {
             return $this->json(['error' => 'Item niet gevonden'], Response::HTTP_NOT_FOUND);

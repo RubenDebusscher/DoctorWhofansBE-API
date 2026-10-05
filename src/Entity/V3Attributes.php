@@ -8,6 +8,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Serializer\Attribute\Ignore;
+use App\Entity\V3AttributeContentTypes;
 use App\Entity\Code;
 
 /**
@@ -32,14 +33,14 @@ class V3Attributes
      * @var string
      */
     #[ORM\Column(name: 'Name', type: 'string', length: 255, nullable: false)]
-    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read', 'page:details'])]
     private $name;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'Description', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read', 'page:details'])]
     private $description;
 
     /**
@@ -47,49 +48,49 @@ class V3Attributes
    */
     #[ORM\ManyToOne(targetEntity: Code::class)]
     #[ORM\JoinColumn(name: 'ValidationRuleID', referencedColumnName: 'id')] // 👈 Verwijst in v3_codes naar kolom 'id'
-    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'contenttype:read', 'v3_item:detail', 'v3_itemattributes:read', 'page:details'])]
     private ?Code $validationrule = null;
 
     /**
      * @var bool
      */
     #[ORM\Column(name: 'Visibility', type: 'boolean', nullable: false, options: ['default' => '1'])]
-    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read', 'page:details'])]
     private $visibility = true;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'LookupTable', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read', 'page:details'])]
     private $lookuptable;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'LookupTable2', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read', 'page:details'])]
     private ?string $lookuptable2 = null;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'BaseAttributes', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read', 'page:details'])]
     private $baseattributes;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'Template', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read', 'page:details'])]
     private $template;
 
     /**
      * @var bool|null
      */
     #[ORM\Column(name: 'Repeatable', type: 'boolean', nullable: true)]
-    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read'])]
+    #[Groups(['v3_attributes:read', 'v3_item:detail', 'contenttype:read', 'v3_itemattributes:read', 'page:details'])]
     private $repeatable;
 
     /**
@@ -121,25 +122,14 @@ class V3Attributes
     private $updatedAt = null;
 
     /**
-     * Geen #[Groups] hier om de lus (Circular Reference) te breken!
-     *
-     * @var Collection<int, V3Contenttypes>
-     */
-    #[ORM\ManyToMany(targetEntity: \App\Entity\V3Contenttypes::class, inversedBy: 'attributeid')]
-    #[ORM\JoinTable(
-        name: 'V3__AttributeContentTypes',
-        joinColumns: [
-            new ORM\JoinColumn(name: 'AttributeID', referencedColumnName: 'AttributeID')
-        ],
-        inverseJoinColumns: [
-            new ORM\JoinColumn(name: 'ContentTypeID', referencedColumnName: 'ContentTypeID')
-        ]
-    )]
-    private $contenttypeid;
+      * @var Collection<int, V3AttributeContentTypes>
+      */
+    #[ORM\OneToMany(mappedBy: 'attribute', targetEntity: V3AttributeContentTypes::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $attributeContentTypes;
 
     public function __construct()
     {
-        $this->contenttypeid = new ArrayCollection();
+        $this->attributeContentTypes = new ArrayCollection();
     }
 
     public function getAttributeid(): ?int
@@ -292,28 +282,34 @@ class V3Attributes
     }
 
     /**
-     * @return Collection<int, V3Contenttypes>
+     * @return Collection<int, V3AttributeContentTypes>
      */
-    public function getContenttypeid(): Collection
+    public function getAttributeContentTypes(): Collection
     {
-        return $this->contenttypeid;
+        return $this->attributeContentTypes;
     }
 
-    public function addContenttypeid(V3Contenttypes $contenttypeid): static
+    public function addAttributeContentType(V3AttributeContentTypes $attributeContentType): static
     {
-        if (!$this->contenttypeid->contains($contenttypeid)) {
-            $this->contenttypeid->add($contenttypeid);
+        if (!$this->attributeContentTypes->contains($attributeContentType)) {
+            $this->attributeContentTypes->add($attributeContentType);
+            $attributeContentType->setAttribute($this);
         }
 
         return $this;
     }
 
-    public function removeContenttypeid(V3Contenttypes $contenttypeid): static
+    public function removeAttributeContentType(V3AttributeContentTypes $attributeContentType): static
     {
-        $this->contenttypeid->removeElement($contenttypeid);
+        if ($this->attributeContentTypes->removeElement($attributeContentType)) {
+            if ($attributeContentType->getAttribute() === $this) {
+                $attributeContentType->setAttribute(null);
+            }
+        }
 
         return $this;
     }
+
 
     public function getValidationrule(): ?Code
     {
@@ -325,5 +321,9 @@ class V3Attributes
         $this->validationrule = $validationrule;
 
         return $this;
+    }
+    public function getId(): ?int
+    {
+        return $this->attributeid;
     }
 }

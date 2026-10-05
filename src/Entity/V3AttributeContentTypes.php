@@ -10,28 +10,36 @@ use Symfony\Component\Serializer\Attribute\Groups;
 class V3AttributeContentTypes
 {
     #[ORM\Id]
-    #[ORM\ManyToOne(targetEntity: V3Contenttypes::class)]
-    #[ORM\JoinColumn(name: 'ContentTypeID', referencedColumnName: 'ContentTypeID', nullable: false, onDelete: 'CASCADE')]
-    #[Groups(['v3_item:detail', 'v3_contenttype:read'])]
-    private ?V3Contenttypes $contentType = null;
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: 'integer')]
+    #[Groups(['v3_item:detail', 'v3_contenttype:read', 'contenttype:read', 'code:read','page:details'])]
+    private ?int $id = null;
 
-    #[ORM\Id]
-    #[ORM\ManyToOne(targetEntity: V3Attributes::class)]
+    #[ORM\ManyToOne(targetEntity: Code::class, inversedBy: 'attributeContentTypes')]
+    #[ORM\JoinColumn(name: 'ContentTypeID', referencedColumnName: 'id', nullable: false)]
+    private ?Code $code = null;
+
+    #[ORM\ManyToOne(targetEntity: V3Attributes::class, inversedBy: 'attributeContentTypes')]
     #[ORM\JoinColumn(name: 'AttributeID', referencedColumnName: 'AttributeID', nullable: false, onDelete: 'CASCADE')]
-    #[Groups(['v3_item:detail', 'v3_contenttype:read','contenttype:read'])]
     private ?V3Attributes $attribute = null;
 
     #[ORM\Column(name: 'display_order', type: 'integer', options: ['default' => 0])]
-    #[Groups(['v3_item:detail', 'v3_contenttype:read','contenttype:read'])]
+    #[Groups(['v3_item:detail', 'v3_contenttype:read', 'contenttype:read', 'code:read','page:details'])]
     private int $displayOrder = 0;
 
-    public function getContentType(): ?V3Contenttypes
+    // --- Getters & Setters ---
+    public function getId(): ?int
     {
-        return $this->contentType;
+        return $this->id;
     }
-    public function setContentType(?V3Contenttypes $contentType): static
+
+    public function getCode(): ?Code
     {
-        $this->contentType = $contentType; return $this;
+        return $this->code;
+    }
+    public function setCode(?Code $code): static
+    {
+        $this->code = $code; return $this;
     }
 
     public function getAttribute(): ?V3Attributes

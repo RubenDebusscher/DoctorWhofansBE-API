@@ -15,4 +15,15 @@ class ManagementPagesRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, ManagementPages::class);
     }
+
+    public function findPendingApiIntegrations(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->where('p.apiItem IS NULL')
+            ->andWhere('p.ignoreApi = :ignore')
+            ->setParameter('ignore', false)
+            ->orderBy('p.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

@@ -27,42 +27,42 @@ class V3Itemattributes
     #[ORM\Column(name: 'ItemAttributeValueID', type: 'integer', nullable: false)]
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
-    #[Groups(['v3_itemattributes:read', 'v3_item:detail'])]
+    #[Groups(['v3_itemattributes:read', 'v3_item:detail','page:details'])]
     private ?int $itemattributevalueid = null;
 
     /**
      * @var string|null
      */
     #[ORM\Column(name: 'Value', type: 'text', length: 65535, nullable: true)]
-    #[Groups(['v3_itemattributes:read', 'v3_item:detail', 'v3_item:write'])]
+    #[Groups(['v3_itemattributes:read', 'v3_item:detail', 'v3_item:write','page:details'])]
     private ?string $value = null;
 
     /**
      * @var int|null
      */
     #[ORM\Column(name: 'NumberValue', type: 'integer', nullable: true)]
-    #[Groups(['v3_itemattributes:read', 'v3_item:detail', 'v3_item:write'])]
+    #[Groups(['v3_itemattributes:read', 'v3_item:detail', 'v3_item:write','page:details'])]
     private ?int $numbervalue = null;
 
     /**
      * @var \DateTimeInterface|null
      */
     #[ORM\Column(name: 'DateValue', type: 'datetime', nullable: true)]
-    #[Groups(['v3_itemattributes:read', 'v3_item:detail', 'v3_item:write'])]
+    #[Groups(['v3_itemattributes:read', 'v3_item:detail', 'v3_item:write','page:details'])]
     private ?\DateTimeInterface $datevalue = null;
 
     /**
      * @var bool|null
      */
     #[ORM\Column(name: 'BoolValue', type: 'boolean', nullable: true)]
-    #[Groups(['v3_itemattributes:read', 'v3_item:detail', 'v3_item:write'])]
+    #[Groups(['v3_itemattributes:read', 'v3_item:detail', 'v3_item:write','page:details'])]
     private ?bool $boolvalue = null;
 
     /**
      * @var int|null
      */
     #[ORM\Column(name: 'LookupValue', type: 'integer', nullable: true)]
-    #[Groups(['v3_itemattributes:read', 'v3_item:detail', 'v3_item:write'])]
+    #[Groups(['v3_itemattributes:read', 'v3_item:detail', 'v3_item:write','page:details'])]
     private ?int $lookupvalue = null;
 
 
@@ -70,8 +70,16 @@ class V3Itemattributes
      * @var int|null
      */
     #[ORM\Column(name: 'LookupValue2', type: 'integer', nullable: true)]
-    #[Groups(['v3_item:detail', 'v3_itemattributes:read'])]
+    #[Groups(['v3_item:detail', 'v3_itemattributes:read','page:details'])]
     private ?int $lookupvalue2 = null;
+
+
+    /**
+     * @var string|null
+     */
+    #[ORM\Column(name: 'CalculatedValue', type: 'text', length: 65535, nullable: true)]
+    #[Groups(['v3_itemattributes:read', 'v3_item:detail', 'v3_item:write','page:details'])]
+    private ?string $calculatedvalue = null;
 
     /**
      * @var ManagementUsers|null
@@ -115,7 +123,7 @@ class V3Itemattributes
      */
     #[ORM\JoinColumn(name: 'AttributeID', referencedColumnName: 'AttributeID')]
     #[ORM\ManyToOne(targetEntity: V3Attributes::class)]
-    #[Groups(['v3_itemattributes:read', 'v3_item:detail'])]
+    #[Groups(['v3_itemattributes:read', 'v3_item:detail', 'v3_item:write','page:details'])]
     private ?V3Attributes $attributeid = null;
 
     public function __construct()
@@ -178,6 +186,10 @@ class V3Itemattributes
     }
 
     public function isBoolvalue(): ?bool
+    {
+        return $this->boolvalue;
+    }
+    public function getBoolvalue(): ?bool
     {
         return $this->boolvalue;
     }
@@ -273,6 +285,27 @@ class V3Itemattributes
     public function setAttributeid(?V3Attributes $attributeid): static
     {
         $this->attributeid = $attributeid;
+        return $this;
+    }
+    public function getCalculatedvalue(): ?string
+    {
+        return $this->calculatedvalue;
+    }
+
+    public function setCalculatedvalue(?string $calculatedvalue): static
+    {
+        $this->calculatedvalue = $calculatedvalue;
+        return $this;
+    }
+
+    public function getDefinition(): ?V3Attributes
+    {
+        return $this->attributeid;
+    }
+
+    public function setDefinition(?V3Attributes $definition): static
+    {
+        $this->attributeid = $definition;
         return $this;
     }
 }

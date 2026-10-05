@@ -2,7 +2,6 @@
 
 namespace App\Command;
 
-use App\Entity\V3Contenttypes;
 use App\Entity\V3Items;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -65,8 +64,8 @@ class MigrateV3ImagesCommand extends Command
             }
 
             $typeString = 'General';
-            if ($rawType instanceof V3Contenttypes) {
-                $typeString = $rawType->getName() ?: 'General';
+            if ($rawType instanceof Code) {
+                $typeString = $rawType->getLabel() ?: 'General';
             } elseif (is_string($rawType) && !empty($rawType)) {
                 $typeString = $rawType;
             }
